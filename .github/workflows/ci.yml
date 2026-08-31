@@ -56,13 +56,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler d1 time-travel info beenhere-archive --json > ../../d1-bookmark.json
       - name: Preserve D1 recovery bookmark
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: d1-bookmark-${{ github.sha }}
           path: d1-bookmark.json
           retention-days: 7
       - name: Migrate D1 and deploy Worker
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
