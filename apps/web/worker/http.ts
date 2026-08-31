@@ -6,7 +6,20 @@ const securityHeaders = {
   "cache-control": "no-store",
   "x-content-type-options": "nosniff",
   "referrer-policy": "strict-origin-when-cross-origin",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+  "x-frame-options": "DENY",
 };
+
+export function secureAssetResponse(response: Response, production: boolean): Response {
+  const headers = new Headers(response.headers);
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("x-frame-options", "DENY");
+  headers.set("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+  if (production) headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
 
 export class HttpError extends Error {
   constructor(
@@ -59,7 +72,7 @@ export function errorResponse(error: unknown): Response {
   }
   console.error("Unhandled worker error", error);
   return json(
-    { error: { code: "internal_error", message: "档案馆暂时无法完成这个请求。" } },
+    { error: { code: "internal_error", message: "采访记录网站暂时无法完成这个请求。" } },
     { status: 500 },
   );
 }
@@ -122,16 +135,16 @@ async function verifyAccessJwt(token: string, teamDomain: string, expectedAudien
   return claims;
 }
 
-export async function requireAdmin(request: Request, env: Env): Promise<string> {
+export async function requireIdentity(request: Request, env: Env): Promise<string> {
   const url = new URL(request.url);
   const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  if (local && request.headers.get("x-local-admin") === "1") return "local-editor";
+  if (env.APP_ENV === "development" && local && request.headers.get("x-local-user-email")) return request.headers.get("x-local-user-email")!;
 
   if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) {
-    throw new HttpError(503, "admin_auth_not_configured", "编辑工作台尚未配置 Cloudflare Access。\n");
+    throw new HttpError(503, "account_auth_not_configured", "账户登录尚未配置 Cloudflare Access。\n");
   }
   const assertion = request.headers.get("cf-access-jwt-assertion");
-  if (!assertion) throw new HttpError(401, "admin_auth_required", "编辑工作台需要 Cloudflare Access 身份。\n");
+  if (!assertion) throw new HttpError(401, "account_auth_required", "此操作需要登录。\n");
   return (await verifyAccessJwt(assertion, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD)).email!;
 }
 

@@ -1,5 +1,6 @@
 export type MessageKind = "question" | "answer" | "image" | "pause" | "note" | "section";
-export type SpeakerRole = "interviewer" | "participant" | "editor" | "system";
+export type SpeakerRole = "interviewer" | "participant" | "recorder" | "system";
+export type AccountRole = "member" | "director";
 
 export interface Env {
   DB: D1Database;
@@ -8,11 +9,20 @@ export interface Env {
   SITE_URL: string;
   ACCESS_TEAM_DOMAIN?: string;
   ACCESS_AUD?: string;
+  SUPERADMIN_EMAILS?: string;
 }
 
-export interface ArchiveSummary {
+export interface Account {
   id: string;
-  archiveNumber: string;
+  email: string;
+  displayName: string;
+  role: AccountRole;
+  status: "active" | "suspended";
+}
+
+export interface InterviewRecordSummary {
+  id: string;
+  recordNumber: string;
   title: string;
   excerpt: string;
   conductedAt: string;
@@ -22,7 +32,7 @@ export interface ArchiveSummary {
   topics: Array<{ slug: string; name: string }>;
 }
 
-export interface MessageUnit {
+export interface ConversationUnit {
   id: string;
   sequence: number;
   kind: MessageKind;
@@ -33,45 +43,30 @@ export interface MessageUnit {
   parentUnitId: string | null;
 }
 
-export type PublishedSnapshot = DraftSnapshot;
-
-export interface ArchiveDetail extends ArchiveSummary {
-  edition: {
-    number: number;
-    publishedAt: string;
-    changeSummary: string;
-    contentHash: string;
-  };
-  story: string[];
-  editorialNote: string;
-  units: MessageUnit[];
-  source: {
-    platform: string;
-    canonicalUrl: string | null;
-  } | null;
-}
-
-export interface DraftSnapshot {
-  person: {
-    existingPersonId?: string;
+export interface RecordDraft {
+  participant: {
     slug: string;
     displayName: string;
     identityMode: "real_name" | "pseudonym" | "anonymous";
     bio: string;
   };
-  interview: {
-    title: string;
-    excerpt: string;
-    conductedAt: string;
-    endedAt?: string;
-  };
+  record: { title: string; excerpt: string; conductedAt: string; endedAt?: string };
   story: string[];
-  editorialNote: string;
-  units: Array<Omit<MessageUnit, "id"> & { id?: string }>;
+  recordNote: string;
+  units: Array<Omit<ConversationUnit, "id"> & { id?: string }>;
   topics: Array<{ slug: string; name: string }>;
-  source?: {
-    platform: "douyin" | "direct" | "other";
+  source: {
+    sourceType: "douyin" | "social_media" | "in_person" | "direct" | "other";
+    platformName?: string;
     externalId?: string;
     canonicalUrl?: string;
   };
+}
+
+export interface InterviewRecordDetail extends InterviewRecordSummary {
+  edition: { number: number; publishedAt: string; changeSummary: string; contentHash: string };
+  story: string[];
+  recordNote: string;
+  units: ConversationUnit[];
+  source: { sourceType: string; platformName: string | null; canonicalUrl: string | null } | null;
 }

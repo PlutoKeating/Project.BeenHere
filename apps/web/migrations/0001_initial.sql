@@ -1,101 +1,102 @@
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE accounts (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  display_name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'director')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE people (
   id TEXT PRIMARY KEY,
   slug TEXT NOT NULL UNIQUE,
   display_name TEXT NOT NULL,
   identity_mode TEXT NOT NULL CHECK (identity_mode IN ('real_name', 'pseudonym', 'anonymous')),
   bio TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'merged', 'restricted')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE interviews (
+CREATE TABLE interview_records (
   id TEXT PRIMARY KEY,
-  archive_number TEXT UNIQUE,
+  record_number TEXT UNIQUE,
   person_id TEXT NOT NULL REFERENCES people(id),
   title TEXT NOT NULL,
   excerpt TEXT NOT NULL DEFAULT '',
   conducted_at TEXT NOT NULL,
   ended_at TEXT,
-  timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
-  language TEXT NOT NULL DEFAULT 'zh-CN',
-  editorial_state TEXT NOT NULL DEFAULT 'captured',
-  visibility TEXT NOT NULL DEFAULT 'embargoed' CHECK (visibility IN ('public', 'unlisted', 'embargoed', 'withdrawn')),
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public', 'unlisted', 'deleted')),
   current_edition_id TEXT,
   random_key REAL NOT NULL,
+  deleted_at TEXT,
+  deleted_by TEXT REFERENCES accounts(id),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX interviews_person_idx ON interviews(person_id, conducted_at DESC);
-CREATE INDEX interviews_public_random_idx ON interviews(visibility, random_key);
-CREATE INDEX interviews_archive_number_idx ON interviews(archive_number);
+CREATE INDEX interview_records_person_idx ON interview_records(person_id, conducted_at DESC);
+CREATE INDEX interview_records_public_random_idx ON interview_records(visibility, random_key);
+CREATE INDEX interview_records_number_idx ON interview_records(record_number);
 
-CREATE TABLE archive_sequences (
+CREATE TABLE record_sequences (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   allocated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE record_owners (
+  record_id TEXT NOT NULL REFERENCES interview_records(id),
+  account_id TEXT NOT NULL REFERENCES accounts(id),
+  ownership_kind TEXT NOT NULL CHECK (ownership_kind IN ('uploader', 'claimed', 'assigned')),
+  granted_by TEXT REFERENCES accounts(id),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (record_id, account_id)
+);
+
+CREATE INDEX record_owners_account_idx ON record_owners(account_id, created_at DESC);
+
 CREATE TABLE source_records (
   id TEXT PRIMARY KEY,
-  interview_id TEXT NOT NULL REFERENCES interviews(id),
-  platform TEXT NOT NULL CHECK (platform IN ('douyin', 'direct', 'other')),
+  record_id TEXT NOT NULL REFERENCES interview_records(id),
+  source_type TEXT NOT NULL CHECK (source_type IN ('douyin', 'social_media', 'in_person', 'direct', 'other')),
+  platform_name TEXT,
   external_id TEXT,
   canonical_url TEXT,
-  source_published_at TEXT,
   captured_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  caption_snapshot TEXT,
-  metadata_snapshot TEXT NOT NULL DEFAULT '{}',
-  evidence_manifest_hash TEXT,
-  UNIQUE(platform, external_id)
+  UNIQUE(source_type, external_id)
 );
 
-CREATE TABLE editorial_drafts (
-  interview_id TEXT PRIMARY KEY REFERENCES interviews(id),
+CREATE TABLE record_drafts (
+  record_id TEXT PRIMARY KEY REFERENCES interview_records(id),
   revision INTEGER NOT NULL DEFAULT 1,
-  status TEXT NOT NULL DEFAULT 'editorial_review' CHECK (status IN ('editorial_review', 'participant_review', 'approved')),
   snapshot TEXT NOT NULL,
-  review_hash TEXT,
-  updated_by TEXT NOT NULL,
+  updated_by TEXT NOT NULL REFERENCES accounts(id),
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE consent_grants (
-  id TEXT PRIMARY KEY,
-  person_id TEXT NOT NULL REFERENCES people(id),
-  interview_id TEXT NOT NULL REFERENCES interviews(id),
-  scope TEXT NOT NULL,
-  evidence_reference TEXT NOT NULL,
-  granted_at TEXT NOT NULL,
-  expires_at TEXT,
-  revoked_at TEXT,
-  policy_version TEXT NOT NULL
 );
 
 CREATE TABLE published_editions (
   id TEXT PRIMARY KEY,
-  interview_id TEXT NOT NULL REFERENCES interviews(id),
+  record_id TEXT NOT NULL REFERENCES interview_records(id),
   edition_number INTEGER NOT NULL,
   snapshot TEXT NOT NULL,
   change_summary TEXT NOT NULL,
-  approved_by TEXT NOT NULL,
-  published_by TEXT NOT NULL,
-  consent_grant_id TEXT NOT NULL REFERENCES consent_grants(id),
+  published_by TEXT NOT NULL REFERENCES accounts(id),
   published_at TEXT NOT NULL,
   supersedes_id TEXT REFERENCES published_editions(id),
   content_hash TEXT NOT NULL,
-  UNIQUE(interview_id, edition_number)
+  UNIQUE(record_id, edition_number)
 );
 
-CREATE TABLE message_units (
+CREATE TABLE conversation_units (
   id TEXT PRIMARY KEY,
-  interview_id TEXT NOT NULL REFERENCES interviews(id),
+  record_id TEXT NOT NULL REFERENCES interview_records(id),
   edition_id TEXT NOT NULL REFERENCES published_editions(id),
   sequence INTEGER NOT NULL,
   kind TEXT NOT NULL CHECK (kind IN ('question', 'answer', 'image', 'pause', 'note', 'section')),
-  speaker_role TEXT NOT NULL CHECK (speaker_role IN ('interviewer', 'participant', 'editor', 'system')),
+  speaker_role TEXT NOT NULL CHECK (speaker_role IN ('interviewer', 'participant', 'recorder', 'system')),
   body TEXT NOT NULL,
   occurred_at TEXT,
   duration_seconds INTEGER,
@@ -110,29 +111,48 @@ CREATE TABLE topics (
   description TEXT NOT NULL DEFAULT ''
 );
 
-CREATE TABLE interview_topics (
-  interview_id TEXT NOT NULL REFERENCES interviews(id),
+CREATE TABLE record_topics (
+  record_id TEXT NOT NULL REFERENCES interview_records(id),
   topic_id TEXT NOT NULL REFERENCES topics(id),
-  PRIMARY KEY (interview_id, topic_id)
+  PRIMARY KEY (record_id, topic_id)
+);
+
+CREATE TABLE claim_requests (
+  id TEXT PRIMARY KEY,
+  record_id TEXT NOT NULL REFERENCES interview_records(id),
+  claimant_account_id TEXT NOT NULL REFERENCES accounts(id),
+  request_text TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+  reviewed_by TEXT REFERENCES accounts(id),
+  review_note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at TEXT,
+  UNIQUE(record_id, claimant_account_id, status)
 );
 
 CREATE TABLE correction_requests (
   id TEXT PRIMARY KEY,
-  interview_id TEXT REFERENCES interviews(id),
+  record_id TEXT REFERENCES interview_records(id),
   requester_contact TEXT NOT NULL,
   requester_role TEXT NOT NULL,
   kind TEXT NOT NULL,
   description TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'submitted',
-  resolution TEXT,
-  assigned_to TEXT,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  resolved_at TEXT
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE public_request_limits (
+  id TEXT PRIMARY KEY,
+  request_count INTEGER NOT NULL DEFAULT 1,
+  expires_at TEXT NOT NULL
+);
+
+CREATE INDEX public_request_limits_expiry_idx ON public_request_limits(expires_at);
 
 CREATE TABLE audit_events (
   id TEXT PRIMARY KEY,
-  actor TEXT NOT NULL,
+  actor_account_id TEXT REFERENCES accounts(id),
+  actor_label TEXT NOT NULL,
   action TEXT NOT NULL,
   target_type TEXT NOT NULL,
   target_id TEXT NOT NULL,
@@ -143,11 +163,3 @@ CREATE TABLE audit_events (
 );
 
 CREATE INDEX audit_target_idx ON audit_events(target_type, target_id, created_at DESC);
-
-CREATE TABLE idempotency_keys (
-  key TEXT PRIMARY KEY,
-  actor TEXT NOT NULL,
-  response_status INTEGER NOT NULL,
-  response_body TEXT NOT NULL,
-  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);

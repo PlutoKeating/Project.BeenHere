@@ -1,22 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { requireAdmin } from "./http";
+import { requireIdentity } from "./http";
 import type { Env } from "./types";
 
-const env = { APP_ENV: "production", SITE_URL: "https://beenhere.arr2018.dpdns.org" } as Env;
+const productionEnv = { APP_ENV: "production", SITE_URL: "https://beenhere.arr2018.dpdns.org" } as Env;
+const developmentEnv = { ...productionEnv, APP_ENV: "development" } as Env;
 
-describe("admin authentication", () => {
-  it("allows the explicit local development override", async () => {
-    const request = new Request("http://localhost/api/admin/interviews", { headers: { "x-local-admin": "1" } });
-    await expect(requireAdmin(request, env)).resolves.toBe("local-editor");
+describe("account authentication", () => {
+  it("allows an explicit local identity", async () => {
+    const request = new Request("http://localhost/api/account/me", { headers: { "x-local-user-email": "owner@example.com" } });
+    await expect(requireIdentity(request, developmentEnv)).resolves.toBe("owner@example.com");
   });
 
   it("rejects a spoofed identity header when Access is not configured", async () => {
-    const request = new Request("https://beenhere.arr2018.dpdns.org/api/admin/interviews", {
+    const request = new Request("https://beenhere.arr2018.dpdns.org/api/account/me", {
       headers: { "cf-access-authenticated-user-email": "attacker@example.com" },
     });
-    await expect(requireAdmin(request, env)).rejects.toMatchObject({
+    await expect(requireIdentity(request, productionEnv)).rejects.toMatchObject({
       status: 503,
-      code: "admin_auth_not_configured",
+      code: "account_auth_not_configured",
     });
+  });
+
+  it("rejects the local development header in production", async () => {
+    const request = new Request("http://localhost/api/account/me", { headers: { "x-local-user-email": "attacker@example.com" } });
+    await expect(requireIdentity(request, productionEnv)).rejects.toMatchObject({ status: 503 });
   });
 });

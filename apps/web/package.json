@@ -12,9 +12,8 @@
     "test:watch": "vitest --config vitest.config.ts",
     "deploy": "vite build && wrangler deploy",
     "cf:typegen": "wrangler types worker/env.d.ts",
-    "db:migrate:local": "wrangler d1 migrations apply beenhere-archive --local",
-    "db:migrate:remote": "wrangler d1 migrations apply beenhere-archive --remote",
-    "db:seed:local": "wrangler d1 execute beenhere-archive --local --file=./seed.sql"
+    "db:migrate:local": "wrangler d1 migrations apply beenhere-records --local",
+    "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote"
   },
   "dependencies": {
     "lucide-react": "^1.38.0",
