@@ -39,7 +39,8 @@ export class RecordManagementModule {
   }
 
   async mine(account: Account) {
-    const base = `SELECT r.id, r.record_number, r.title, r.visibility, r.updated_at, d.revision
+    const base = `SELECT r.id, r.record_number, json_extract(d.snapshot, '$.record.title') AS title,
+      r.visibility, d.updated_at, d.revision
       FROM interview_records r JOIN record_drafts d ON d.record_id = r.id`;
     const statement = account.role === "director"
       ? this.db.prepare(`${base} ORDER BY r.updated_at DESC`)
@@ -63,8 +64,6 @@ export class RecordManagementModule {
     const now = new Date().toISOString();
     const results = await this.db.batch([
       this.db.prepare("UPDATE record_drafts SET revision = ?, snapshot = ?, updated_by = ?, updated_at = ? WHERE record_id = ? AND revision = ?").bind(nextRevision, JSON.stringify(draft), account.id, now, recordId, expectedRevision),
-      this.db.prepare("UPDATE interview_records SET title = ?, excerpt = ?, conducted_at = ?, ended_at = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(draft.record.title, draft.record.excerpt, draft.record.conductedAt, draft.record.endedAt ?? null, now, recordId, recordId, nextRevision),
-      this.db.prepare("UPDATE people SET slug = ?, display_name = ?, identity_mode = ?, bio = ?, updated_at = ? WHERE id = (SELECT person_id FROM interview_records WHERE id = ?) AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(draft.participant.slug, draft.participant.displayName, draft.participant.identityMode, draft.participant.bio, now, recordId, recordId, nextRevision),
       this.db.prepare("UPDATE source_records SET source_type = ?, platform_name = ?, external_id = ?, canonical_url = ? WHERE record_id = ? AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(draft.source.sourceType, draft.source.platformName ?? null, draft.source.externalId ?? null, draft.source.canonicalUrl ?? null, recordId, recordId, nextRevision),
       this.db.prepare(`INSERT INTO audit_events (id, actor_account_id, actor_label, action, target_type, target_id, reason, created_at)
         SELECT ?, ?, ?, 'record.updated', 'interview_record', ?, ?, ?
@@ -96,7 +95,8 @@ export class RecordManagementModule {
     const draft = JSON.parse(row.snapshot) as RecordDraft;
     const statements: D1PreparedStatement[] = [
       this.db.prepare("INSERT INTO published_editions (id, record_id, edition_number, snapshot, change_summary, published_by, published_at, supersedes_id, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(editionId, recordId, edition, row.snapshot, summary, account.id, now, row.current_edition_id, contentHash),
-      this.db.prepare("UPDATE interview_records SET record_number = ?, current_edition_id = ?, visibility = 'public', updated_at = ? WHERE id = ?").bind(recordNumber, editionId, now, recordId),
+      this.db.prepare("UPDATE interview_records SET record_number = ?, current_edition_id = ?, title = ?, excerpt = ?, conducted_at = ?, ended_at = ?, visibility = 'public', updated_at = ? WHERE id = ?").bind(recordNumber, editionId, draft.record.title, draft.record.excerpt, draft.record.conductedAt, draft.record.endedAt ?? null, now, recordId),
+      this.db.prepare("UPDATE people SET slug = ?, display_name = ?, identity_mode = ?, bio = ?, updated_at = ? WHERE id = (SELECT person_id FROM interview_records WHERE id = ?)").bind(draft.participant.slug, draft.participant.displayName, draft.participant.identityMode, draft.participant.bio, now, recordId),
       this.db.prepare("DELETE FROM record_topics WHERE record_id = ?").bind(recordId),
     ];
     const unitIds = draft.units.map(() => uid("unit"));

@@ -69,8 +69,6 @@ export class RecordRepository {
       id: string; sequence: number; kind: ConversationUnit["kind"]; speaker_role: ConversationUnit["speakerRole"];
       body: string; occurred_at: string | null; duration_seconds: number | null; parent_unit_id: string | null;
     }>();
-    const source = await this.db.prepare(`SELECT source_type, platform_name, canonical_url FROM source_records
-      WHERE record_id = ? ORDER BY captured_at LIMIT 1`).bind(row.id).first<{ source_type: string; platform_name: string | null; canonical_url: string | null }>();
     const snapshot = JSON.parse(edition.snapshot) as RecordDraft;
     return {
       ...mapSummary(row, await this.topics(row.id)),
@@ -81,7 +79,11 @@ export class RecordRepository {
         id: unit.id, sequence: unit.sequence, kind: unit.kind, speakerRole: unit.speaker_role, body: unit.body,
         occurredAt: unit.occurred_at, durationSeconds: unit.duration_seconds, parentUnitId: unit.parent_unit_id,
       })),
-      source: source ? { sourceType: source.source_type, platformName: source.platform_name, canonicalUrl: source.canonical_url } : null,
+      source: {
+        sourceType: snapshot.source.sourceType,
+        platformName: snapshot.source.platformName ?? null,
+        canonicalUrl: snapshot.source.canonicalUrl ?? null,
+      },
     };
   }
 
