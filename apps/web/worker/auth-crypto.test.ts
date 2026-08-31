@@ -4,7 +4,7 @@ import { createOpaqueToken, hashOpaqueToken, hashPassword, verifyPassword } from
 describe("account credentials", () => {
   it("verifies only the password used to create a versioned credential", async () => {
     const credential = await hashPassword("correct horse battery staple");
-    expect(credential).toMatch(/^pbkdf2-sha256\$210000\$/);
+    expect(credential).toMatch(/^pbkdf2-sha256\$100000\$/);
     await expect(verifyPassword("correct horse battery staple", credential)).resolves.toBe(true);
     await expect(verifyPassword("wrong password", credential)).resolves.toBe(false);
   });

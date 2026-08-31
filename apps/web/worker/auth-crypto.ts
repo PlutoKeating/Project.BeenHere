@@ -1,5 +1,6 @@
 const encoder = new TextEncoder();
-const iterations = 210_000;
+// Cloudflare Workers Web Crypto currently caps PBKDF2 at 100,000 rounds.
+const iterations = 100_000;
 
 function base64Url(bytes: Uint8Array): string {
   let binary = "";

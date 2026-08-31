@@ -22,7 +22,7 @@
     {
       "binding": "DB",
       "database_name": "beenhere-records",
-      "database_id": "fee89a5b-6281-496a-b4e9-18e8b96439c9",
+      "database_id": "9a227e92-b93f-4718-9abe-92569baf1776",
       "migrations_dir": "migrations"
     }
   ],
