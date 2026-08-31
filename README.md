@@ -31,7 +31,7 @@
 
 - [设计灵魂](docs/DESIGN_SOUL.md) — 项目的精神、理念与产品愿景
 - [完整产品与系统架构](docs/ARCHITECTURE.md) — 最终产品形态、领域模型、模块、数据、安全与运维设计
-- [统一语言](CONTEXT.md) — 项目领域术语与边界
+- [统一语言](docs/CONTEXT.md) — 项目领域术语与边界
 - [设计系统](docs/DESIGN_SYSTEM.md) — 颜色、字体、空间与组件语言
 - [本地开发与部署](docs/QUICK_START.md) — Cloudflare Worker、D1 与 CI/CD
 

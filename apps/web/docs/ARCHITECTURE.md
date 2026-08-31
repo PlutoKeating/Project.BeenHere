@@ -27,6 +27,6 @@ Cloudflare Vite plugin 在本地使用 workerd，在部署时生成 Worker 与�
 - `ArchiveRepository` 只读取公开或持链接可见的当前 Edition。
 - `EditorialModule` 管理 Draft、Participant Review、Consent Grant。
 - `PublicationModule` 分配 Archive Number、创建不可变 Edition、生成 Message Unit、执行 Withdrawal。
-- 管理接口依赖 Cloudflare Access 注入的 `Cf-Access-Authenticated-User-Email`。
+- 管理接口验证 Cloudflare Access 注入的 `Cf-Access-Jwt-Assertion`，包括签名、issuer、audience 与有效期。
 - 本地管理员旁路只允许 localhost。
 - 所有公开写入使用 Zod 校验；审计事件 append-only。

@@ -424,9 +424,9 @@ apps/
     public/               # 静态响应头等资产
 docs/
   adr/                    # 难逆转决策
+  CONTEXT.md              # 统一语言
   DESIGN_SYSTEM.md        # 视觉与交互规范
   QUICK_START.md          # 本地开发与部署
-CONTEXT.md                 # 统一语言
 ```
 
 Worker 内的 Editorial、Publication、Discovery 与 Repository 保持小接口；React 只依赖 HTTP interface，不直接依赖领域实现。

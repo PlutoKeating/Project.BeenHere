@@ -13,7 +13,7 @@
 每次需求开始前必须阅读：
 
 - `README.md`
-- `CONTEXT.md`
+- `docs/CONTEXT.md`
 - `docs/DESIGN_SOUL.md`
 - `docs/ARCHITECTURE.md`
 

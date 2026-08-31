@@ -26,6 +26,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Check root documentation layout
+        run: |
+          unexpected="$(find . -maxdepth 1 -type f -name '*.md' ! -name README.md ! -name AGENTS.md -print)"
+          test -z "$unexpected" || { echo "Move root Markdown into docs/: $unexpected"; exit 1; }
       - run: npm ci
       - run: npm run check
 
