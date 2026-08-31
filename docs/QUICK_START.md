@@ -46,7 +46,7 @@ npm run deploy
 
 ## GitHub Actions
 
-`.github/workflows/ci.yml` 在 pull request 执行验证，在 `main` push、手工触发或 `content-published` repository dispatch 后执行验证、D1 migration、Worker deployment、线上健康检查。
+`.github/workflows/ci.yml` 在 pull request 执行验证，在 `main` push、手工触发或 `content-published` repository dispatch 后执行验证、记录 D1 Time Travel recovery bookmark、执行 migration、部署 Worker 并完成线上健康检查。CI 不导出生产数据库明文。
 
 已配置的仓库配置：
 

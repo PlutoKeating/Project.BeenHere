@@ -451,7 +451,7 @@ Worker 内的 Editorial、Publication、Discovery 与 Repository 保持小接口
 
 监控公共错误率与延迟、Drift 空结果与重复率、发布失败、Withdrawal 下线耗时、D1 异常、管理员敏感操作。告警不携带采访正文。
 
-- D1 migration 远程执行前自动生成备份。
+- D1 migration 远程执行前记录 Time Travel recovery bookmark；数据库内容不复制到 CI Artifact。
 - Source Evidence 存储启用后必须配置版本与生命周期策略。
 - 衍生索引不备份，随时从 D1 重建。
 - 定期执行 D1 与完整 Interview 恢复演练。
