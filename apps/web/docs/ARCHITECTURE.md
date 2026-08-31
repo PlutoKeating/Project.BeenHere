@@ -1,32 +1,11 @@
-# Web Module Architecture
+# Web 模块边界
 
-## Runtime
+- `src/pages`：公共阅读、账户中心、独立录入、编辑、认领与馆长页面。
+- `src/components/RecordForm.tsx`：录入方式的当前适配器；未来 OCR、批量导入或媒体附件在此模块旁扩展。
+- `worker/record-repository.ts`：只读公开采访记录。
+- `worker/accounts.ts`：Access 身份映射、账户状态和馆长授权。
+- `worker/record-management.ts`：所有权、修订、公开、软删除和认领。
+- `worker/governance.ts`：公开更正与撤回请求。
+- `migrations/0001_initial.sql`：上线前压缩后的唯一数据库定义。
 
-```text
-React SPA + Tailwind assets
-          |
-Cloudflare Worker HTTP interface
-          |
-   ArchiveRepository
-   EditorialModule
-   PublicationModule
-          |
-        D1
-```
-
-Cloudflare Vite plugin 在本地使用 workerd，在部署时生成 Worker 与静态资源配置。`/api/*` 先进入 Worker；其他路径由静态资源 binding 提供 SPA fallback。
-
-## Design system
-
-`src/styles/tokens.css` 实现 primitive、semantic、component 三层 token。`src/styles/global.css` 将 semantic token 映射到 Tailwind v4 theme。组件不使用未经 token 语义化的品牌颜色。
-
-移动端使用单栏、20px 边距、底部安全区导航；平板切换双栏；桌面目录最大宽度 1140px，阅读正文固定 720px。Paper 与 Night theme 只覆盖 semantic token。
-
-## Backend rules
-
-- `ArchiveRepository` 只读取公开或持链接可见的当前 Edition。
-- `EditorialModule` 管理 Draft、Participant Review、Consent Grant。
-- `PublicationModule` 分配 Archive Number、创建不可变 Edition、生成 Message Unit、执行 Withdrawal。
-- 管理接口验证 Cloudflare Access 注入的 `Cf-Access-Jwt-Assertion`，包括签名、issuer、audience 与有效期。
-- 本地管理员旁路只允许 localhost。
-- 所有公开写入使用 Zod 校验；审计事件 append-only。
+React 只通过 `src/lib/api.ts` 使用 HTTP 接口，不直接依赖 Worker 模块或 D1 字段。

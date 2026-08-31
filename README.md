@@ -1,47 +1,24 @@
-<div align="center">
-
 # Project.BeenHere · 来过
 
-**你不需要重要，才值得被记录。**
+一个公开保存陌生人随机采访陌生人之真实对话的网站。内容统一称为“采访记录”；抖音等平台负责对话发生与传播，本站负责结构化呈现、长期维护、认领与更正。
 
-</div>
+生产地址：<https://beenhere.arr2018.dpdns.org>
 
-> Project.BeenHere 是一座**记录普通人存在痕迹的开放互联网档案馆**。它不制造明星，不评判价值，只做一件简单的事：
->
-> **见证一个人曾经来过。**
+## 使用方式
 
-一个人像漂流瓶一样随机出现，被另一个陌生人捡起，接受一次正式采访，然后进入一座庄严的公共档案馆。
+- 路人无需登录，可阅读、搜索、随机发现全部公开采访记录，也可提交更正或撤回请求。
+- 登录成员可录入、修改、公开和软删除自己拥有的采访记录。
+- 被采访者可提交带说明的认领申请；记录主人同意后，申请人成为共同主人并可编辑。
+- 馆长可管理账户及全部采访记录。
 
-## 是什么 / 不是什么
+登录由 Cloudflare Access 完成，本站不保存密码。第一次通过 Access 登录时，系统自动创建本站账户。
 
-- 是**见证人**的互联网，不是**展示人**的互联网
-- 是一座**档案馆**，不是媒体门户 / 人物数据库 / 社交平台
-- 每一个普通人都拥有与名人完全相同的档案规格
+## 技术结构
 
-## 核心体验
-
-**漂流 → 偶遇 → 采访 → 记录 → 入馆 → 再次漂流**
-
-没有终点。用户不必先选择分类、人物或热门内容，而是随机打开一份档案，遇见一个本不会认识的人。
-
-> [!NOTE]
-> 抖音承载采访发生、传播与社区互动；本站承载独立、结构化、可修订的长期公共档案。
-
-## 文档
-
-- [设计灵魂](docs/DESIGN_SOUL.md) — 项目的精神、理念与产品愿景
-- [完整产品与系统架构](docs/ARCHITECTURE.md) — 最终产品形态、领域模型、模块、数据、安全与运维设计
-- [统一语言](docs/CONTEXT.md) — 项目领域术语与边界
-- [设计系统](docs/DESIGN_SYSTEM.md) — 颜色、字体、空间与组件语言
-- [本地开发与部署](docs/QUICK_START.md) — Cloudflare Worker、D1 与 CI/CD
-
-## 在线档案馆
-
-生产环境：<https://beenhere.arr2018.dpdns.org>
+React 19、Tailwind CSS 4 与 Vite 构成响应式前端；Cloudflare Worker 提供同源 API 与静态资源；Cloudflare D1 保存账户、采访记录、版本、所有权、认领和审计数据。详见 [架构](docs/ARCHITECTURE.md)、[领域语言](docs/CONTEXT.md)、[设计系统](docs/DESIGN_SYSTEM.md) 与 [启动部署](docs/QUICK_START.md)。
 
 ```bash
 npm install
-npm run db:migrate:local
-npm run db:seed:local
 npm run dev
+npm run check
 ```

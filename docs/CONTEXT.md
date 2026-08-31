@@ -1,79 +1,59 @@
 # Project.BeenHere Domain
 
-Project.BeenHere preserves interviews that happen on external platforms as durable, structured, publicly readable records. External platforms remain the place where encounters and community interaction happen; this system owns the archive.
+Project.BeenHere 保存陌生人在公开社交媒体或其他场景中发生的对话，使其成为长期可读、可认领、可修订的采访记录。
 
-## People and interviews
+## 人与内容
 
-**Person Record**:
-The enduring record of one interviewed person across one or more interviews. It is not a social profile and carries no popularity metrics.
-_Avoid_: User profile, creator page, account
+**采访记录（Interview Record）**：
+一次有明确参与者与时间边界的对话记录，可以来自抖音、其他公开社交媒体或线下整理。
 
-**Interview**:
-One bounded conversation with a person at a known time. An interview owns its source material and can have multiple published editions.
-_Avoid_: Article, post, archive
+**被采访者（Participant）**：
+采访记录中被提问、被了解的人；可以实名、化名或匿名呈现。
 
-**Message Unit**:
-The smallest ordered piece of an interview, such as a question, answer, image, pause, note, or section marker.
-_Avoid_: Block, message, paragraph
+**对话单元（Conversation Unit）**：
+采访记录中最小的有序片段，例如问题、回答、图片、停顿或编辑说明。
 
-**Published Edition**:
-An immutable, numbered snapshot of an interview approved for public reading. Later corrections create a new edition; they never overwrite an earlier edition silently.
-_Avoid_: Version, article revision
+**记录编号（Record Number）**：
+采访记录首次公开时获得的稳定公开标识，永不复用。
 
-**Archive Number**:
-The stable public identifier assigned to an interview when its first edition is published.
-_Avoid_: Person number, post ID
+**公开版本（Published Edition）**：
+采访记录一次公开内容的不可变快照；后续修改产生新版本，不静默覆盖。
 
-## Evidence and editing
+## 账户与权利
 
-**Source Record**:
-A reference to where an interview occurred, normally a Douyin post or private chat, plus captured evidence and provenance metadata.
-_Avoid_: Imported post, original article
+**账户（Account）**：
+由 Cloudflare Access 验证身份、在本站保存展示名与权限状态的自然人账户。
 
-**Source Evidence**:
-Restricted raw material used to verify a Source Record, including screenshots, exports, images, audio, and hashes. Source Evidence is not public by default.
-_Avoid_: Public attachment, archive asset
+**记录主人（Record Owner）**：
+可以修改、公开或软删除某条采访记录的账户，包括原上传者与获批认领者。
 
-**Editorial Draft**:
-Mutable working material produced from Source Evidence before participant approval and publication.
-_Avoid_: Unpublished edition
+**馆长（Director）**：
+可以管理所有账户与采访记录的超级管理员。
 
-**Editorial Note**:
-A public explanation of material editing, redaction, reconstruction, or uncertainty.
-_Avoid_: Admin comment
+**认领申请（Claim Request）**：
+登录账户以“我是被采访者”为由提交的申请，包含申请文本，由现有记录主人决定同意或拒绝。
 
-**Redaction**:
-A recorded decision to hide specific personal or sensitive information from public projections while preserving the reason and authorized audit trail.
-_Avoid_: Deletion, censorship
+**软删除（Soft Deletion）**：
+使采访记录立即停止公开但保留版本、所有权与审计历史的可恢复删除。
 
-## Authority and rights
+## 来源与录入
 
-**Participant**:
-The person whose life and words are preserved by an Interview. A Participant may use a real name, pseudonym, or anonymous presentation.
-_Avoid_: Subject, content source
+**来源记录（Source Record）**：
+采访发生的平台、公开链接、外部标识与采集时间等出处信息。
 
-**Consent Grant**:
-A recorded statement defining what material may be processed, published, attributed, and retained, for what scope and duration.
-_Avoid_: Checkbox, blanket authorization
+**录入方式（Ingestion Method）**：
+把任意形式对话转换成结构化采访记录的可替换方式；手工对话录入只是第一种实现。
 
-**Correction Request**:
-A request from a Participant or reader to correct, clarify, redact, attribute, or withdraw published material.
-_Avoid_: Wiki edit, comment
+**来源证据（Source Evidence）**：
+用于核验来源记录的受限原始材料，默认不公开。
 
-**Withdrawal**:
-Removal of an Interview or specific material from public access. A non-identifying tombstone may remain; restricted evidence follows the applicable retention decision.
-_Avoid_: Silent deletion
+## 发现与治理
 
-## Discovery
+**漂流（Drift）**：
+从公开采访记录中进行不按热度排序的随机相遇。
 
-**Drift**:
-An intentionally non-ranked random encounter with an eligible Published Edition.
-_Avoid_: Recommendation, feed
+**更正请求（Correction Request）**：
+公众请求更正、补充、隐私遮蔽或停止公开的治理信息，不直接修改采访记录。
 
-**Topic**:
-An editorially maintained concept connecting interviews without ranking people or implying identity.
-_Avoid_: Hashtag, category leaderboard
-
-**Public Projection**:
-A read model of one Published Edition rendered as Story, Conversation, or Record. It never becomes an independent source of truth.
-_Avoid_: Separate article
+**话题（Topic）**：
+连接采访记录的编辑性概念，不用于给人排名或贴身份标签。
