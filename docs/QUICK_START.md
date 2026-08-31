@@ -48,11 +48,11 @@ npm run deploy
 
 `.github/workflows/ci.yml` 在 pull request 执行验证，在 `main` push、手工触发或 `content-published` repository dispatch 后执行验证、D1 migration、Worker deployment、线上健康检查。
 
-仓库配置：
+已配置的仓库配置：
 
 - Variable `CLOUDFLARE_ACCOUNT_ID`
 - Secret `CLOUDFLARE_API_TOKEN`
 
 Token 只应授予此账号的 Workers Scripts Write、D1 Write、Workers Routes Write。不要上传本机 Wrangler OAuth token。
 
-编辑后台还需先在 Cloudflare Zero Trust 创建 Access self-hosted application，并设置 Worker secrets `ACCESS_TEAM_DOMAIN` 与 `ACCESS_AUD`。Worker 会验证 Access JWT 的签名、签发者、受众和有效期；未配置时生产后台默认关闭。
+生产环境已创建 `BeenHere Editorial` Access self-hosted application，只保护 `/admin*` 与 `/api/admin/*`，公共档案不要求登录。Allow policy 仅接受账号所有者邮箱；Worker secrets `ACCESS_TEAM_DOMAIN` 与 `ACCESS_AUD` 已设置。Worker 会再次验证 Access JWT 的签名、签发者、受众和有效期。
