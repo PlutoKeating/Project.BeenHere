@@ -253,24 +253,21 @@ Application Modules
   |-- Governance
   |-- Audit
   |
-  |-- PostgreSQL
-  |-- S3-compatible Object Storage
-  |-- Search Index
-  `-- Job Worker
+  |-- Cloudflare D1
+  |-- Worker Static Assets
+  `-- Cloudflare Access
 ```
 
 ### 6.1 技术选型
 
-- Web：Next.js、React、TypeScript。
-- UI：服务端渲染优先；少量交互岛；移动端优先。
-- 数据库：PostgreSQL，唯一事务事实来源。
-- 数据访问：轻量类型安全 SQL 层与显式迁移；领域规则不放进 ORM hooks。
-- 文件：S3-compatible object storage；原件私有，公开变体经 CDN。
-- 搜索：独立全文索引；索引是 PostgreSQL 可重建投影，不承载事实。
-- 后台任务：PostgreSQL job table + 独立 worker；不引入 Kafka。
-- 登录：仅编辑工作台需要 OIDC；公共阅读无需账号。
-- OCR/转录、邮件：供应商 Adapter；可替换。
-- 部署：容器化 Web 与 Worker；托管 PostgreSQL、对象存储、CDN/WAF。
+- Web：React、Vite、TypeScript、Tailwind CSS。
+- Runtime：Cloudflare Worker + Static Assets；公共 UI 与 HTTP Interface 同域部署。
+- 数据库：Cloudflare D1，唯一事务事实来源；显式 SQL migration。
+- 数据访问：Module 内部 Repository；领域规则不放进路由或数据库 hook。
+- 登录：编辑工作台由 Cloudflare Access 保护；公共阅读无需账号。
+- 搜索：当前由 D1 对公开 Edition 查询；需要独立索引时只能作为 D1 可重建投影。
+- OCR、转录、对象存储：保留 Adapter seam；未配置供应商前不得伪装为可用能力。
+- 部署：Wrangler 部署到唯一生产域名 `beenhere.arr2018.dpdns.org`；禁用 `workers.dev` 与 preview URL。
 
 ### 6.2 模块接口
 
@@ -326,7 +323,7 @@ Governance ---> Publication ---> Public Projection ---> Discovery/Search
 
 - Module 通过命令、查询结果与 domain event 交互，不跨模块改表。
 - 公共页面只读取 Publication 生成的 projection。
-- 搜索、sitemap、缓存通过 transactional outbox 异步更新。
+- 异步投影启用后通过 D1 outbox 更新；当前同步读取 D1，不维护第二事实来源。
 - 同一进程内部调用；只有 OCR、对象存储、搜索、邮件存在 Adapter seam。
 
 ## 7. 发布与投影
@@ -338,9 +335,9 @@ Governance ---> Publication ---> Public Projection ---> Discovery/Search
 3. 从批准 Draft 生成不可变 Edition snapshot。
 4. 生成 Story、Conversation、Record 所需结构。
 5. 更新 `current_edition_id`。
-6. 写 Audit Event 与 Outbox Event。
+6. 写入不可变 Audit Event。
 
-Worker 消费 Outbox Event，更新搜索索引、清理缓存、更新 sitemap/feed、生成图片公开变体、发送通知。失败可重试；幂等键为 `event_id + handler_name`。搜索或通知失败不回滚已完成出版。
+当前版本在一个 D1 batch 内同步完成出版，公开查询直接读取 D1，不维护 Outbox 或第二份搜索索引。未来接入对象存储、独立搜索或通知后，再以 append-only outbox 增加可重试的异步投影；在此之前不得把这些能力写成已上线。
 
 ## 8. Drift 算法
 
@@ -358,7 +355,7 @@ Worker 消费 Outbox Event，更新搜索索引、清理缓存、更新 sitemap/
 
 搜索文档只含 Archive Number、Participant 公开展示名、当前 Edition 公开文本、Interview 日期、Topic、公开 Editorial Note。
 
-索引不含 Source Evidence、联系信息、Consent Evidence、已遮蔽文本。Withdrawal 产生最高优先级删除索引任务；公共读取同时检查 PostgreSQL 当前状态，防止索引延迟泄露。
+索引不含 Source Evidence、联系信息、Consent Evidence、已遮蔽文本。启用独立索引后，Withdrawal 必须产生最高优先级删除任务；公共读取同时检查 D1 当前状态，防止索引延迟泄露。
 
 ## 10. 权限与安全
 
@@ -394,65 +391,57 @@ Worker 消费 Outbox Event，更新搜索索引、清理缓存、更新 sitemap/
 
 ```text
 GET  /api/v1/drift
+GET  /api/v1/meta
+GET  /api/v1/archives
 GET  /api/v1/archives/{archiveNumber}
 GET  /api/v1/people/{slug}
 GET  /api/v1/topics/{slug}
 GET  /api/v1/years/{year}
 GET  /api/v1/search?q=&topic=&year=&cursor=
-POST /api/v1/correction-requests
+POST /api/v1/corrections
 
-POST  /api/admin/source-records
-POST  /api/admin/source-records/{id}/transcribe
+POST  /api/admin/interviews
 PATCH /api/admin/interviews/{id}/draft
 POST  /api/admin/interviews/{id}/participant-review
 POST  /api/admin/interviews/{id}/approve
 POST  /api/admin/interviews/{id}/publish
-POST  /api/admin/interviews/{id}/revise
-POST  /api/admin/interviews/{id}/redact
 POST  /api/admin/interviews/{id}/withdraw
-POST  /api/admin/people/{id}/merge
 ```
 
-命令接受 idempotency key。并发编辑使用 optimistic concurrency token；冲突必须显式解决。
+后台命令仅接受 Cloudflare Access 已认证身份。OCR、Source Evidence 上传、人物合并、修订与遮蔽保留在领域边界中，待对象存储和对应治理流程配置后开放 HTTP 接口。
 
 ## 13. 仓库结构
 
 ```text
 apps/
-  web/                    # 公共网站与编辑工作台
-  worker/                 # OCR、媒体、索引、通知任务
-packages/
-  domain/                 # 实体、值对象、状态机、策略
-  identity/               # Identity Module
-  ingestion/              # Ingestion Module
-  editorial/              # Editorial Module
-  publication/            # Publication Module
-  discovery/              # Discovery Module
-  governance/             # Governance Module
-  audit/                  # Audit Module
-  database/               # schema、migration、transaction adapters
-  object-storage/         # S3 adapters
-  search/                 # search adapters
-  ui/                     # design tokens、共享 UI
+  web/
+    src/                  # React 公共网站与编辑工作台
+      components/         # 共享 UI
+      pages/              # 路由页面
+      styles/             # 三层设计 token 与 Tailwind 样式
+    worker/               # HTTP interface、领域模块与 D1 repository
+    migrations/           # D1 schema migration
+    public/               # 静态响应头等资产
 docs/
   adr/                    # 难逆转决策
-  policies/               # 同意、编辑、隐私、撤回规则
+  DESIGN_SYSTEM.md        # 视觉与交互规范
+  QUICK_START.md          # 本地开发与部署
 CONTEXT.md                 # 统一语言
 ```
 
-每个 Module 暴露一个小 Interface；公共 Web 不依赖 Ingestion 或 Editorial implementation。
+Worker 内的 Editorial、Publication、Discovery 与 Repository 保持小接口；React 只依赖 HTTP interface，不直接依赖领域实现。
 
 ## 14. 缓存与一致性
 
-- Interview 公共页按 `archiveNumber + editionNumber` 缓存；Edition URL 内容永久稳定。
-- canonical URL 指向当前 Edition；发布新 Edition 时主动失效。
-- Drift 与搜索允许秒级最终一致，但每次返回前校验 visibility。
+- 当前公共 API 使用 `no-store`，撤回可立即生效；静态应用壳由 Cloudflare 全球缓存。
+- 引入 Edition 永久缓存前，必须先实现按 `archiveNumber + editionNumber` 的不可变 URL 与撤回覆盖策略。
+- Drift 与搜索同步读取 D1，并在查询中校验 visibility。
 - Source Evidence、Consent Grant、Correction Request 强一致读取。
-- 使用 PostgreSQL transaction + outbox，不做跨系统分布式事务。
+- 使用 D1 batch 完成同一出版操作；不做跨系统分布式事务。
 
 ## 15. 可用性与无障碍
 
-- 公共页面 SSR；关闭 JavaScript 后核心正文仍可阅读。
+- 公共壳与静态资源由 Worker 全球分发；核心 API 保持独立、稳定、可缓存。
 - WCAG 2.2 AA；键盘可操作、清晰焦点、语义标题、图片 alt、视频字幕。
 - 正文窄栏、低刺激动效、大量留白；支持系统减少动态效果。
 - Story、Conversation、Record 使用 URL 状态，刷新与分享后保持视图。
@@ -460,21 +449,21 @@ CONTEXT.md                 # 统一语言
 
 ## 16. 可观测性与运维
 
-监控公共错误率与延迟、Drift 空结果与重复率、发布任务与索引延迟、OCR 失败率、Withdrawal 下线耗时、对象存储异常、管理员敏感操作。告警不携带采访正文。使用 correlation ID 串联 HTTP、job 与 outbox event。
+监控公共错误率与延迟、Drift 空结果与重复率、发布失败、Withdrawal 下线耗时、D1 异常、管理员敏感操作。告警不携带采访正文。
 
-- PostgreSQL 自动备份与时间点恢复。
-- Object Storage 开启版本与生命周期策略。
-- 搜索索引不备份，随时从 PostgreSQL 重建。
-- 定期执行数据库、对象与完整 Interview 恢复演练。
+- D1 migration 远程执行前自动生成备份。
+- Source Evidence 存储启用后必须配置版本与生命周期策略。
+- 衍生索引不备份，随时从 D1 重建。
+- 定期执行 D1 与完整 Interview 恢复演练。
 
 ## 17. 测试策略
 
 - Domain：状态机、编号、Edition 不可变、Consent、Withdrawal、人物合并。
-- Module interface：真实 PostgreSQL 测试关键事务，不模拟领域规则。
+- Module interface：通过 Worker HTTP interface 与本地 D1 验证关键事务，不模拟领域规则。
 - Adapter contract：对象存储、搜索、OCR、通知使用同一契约测试。
 - Integration：导入到发布、修订、遮蔽、撤回、索引删除全链路。
 - Authorization：每个后台命令覆盖允许与拒绝矩阵。
-- Public rendering：三投影、无 JavaScript、无障碍、视觉回归。
+- Public rendering：三投影、键盘操作、无障碍与视觉回归。
 - Privacy regression：公开响应、日志、搜索文档不含受限字段。
 - Recovery：数据库恢复、对象恢复、搜索重建。
 
@@ -491,14 +480,14 @@ CONTEXT.md                 # 统一语言
 
 ## 19. 完整验收标准
 
-1. 真实采访可从 Source Evidence 生成结构化 Draft。
+1. 编辑者可创建结构化 Draft；Source Evidence 上传与 OCR 在对象存储接入后单独验收。
 2. 受访者确认固定内容与授权范围后才能发布。
 3. 一个 Published Edition 稳定生成 Story、Conversation、Record。
-4. 更正生成新 Edition，旧 Edition 不被静默覆盖。
+4. Edition 快照不可变；修订工作流开放前不得直接覆盖已发布 Edition。
 5. Withdrawal 后公共页、Drift、搜索、索引、sitemap 均不再泄露正文。
 6. Drift 不依赖热度或画像，档案规模增长后仍保持索引查询。
 7. Person Record 可承载多年多次 Interview，不变成人物社交主页。
-8. 搜索索引可从 PostgreSQL 完整重建。
+8. 当前搜索直接读取 D1；未来衍生索引必须可从 D1 完整重建。
 9. Source Evidence 永不通过公共接口或公共对象 URL 暴露。
 10. 恢复演练能够恢复完整 Interview 及其 Edition 历史。
 
