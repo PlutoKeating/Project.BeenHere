@@ -1,38 +1,25 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
-import { AdminPage } from "./pages/AdminPage";
-import { ArchivePage } from "./pages/ArchivePage";
-import { ArchivesPage } from "./pages/ArchivesPage";
+import { ClaimPage } from "./pages/ClaimPage";
+import { ClaimsPage } from "./pages/ClaimsPage";
 import { CorrectionsPage } from "./pages/CorrectionsPage";
+import { DirectorAccountsPage } from "./pages/DirectorAccountsPage";
 import { DriftPage } from "./pages/DriftPage";
 import { HomePage } from "./pages/HomePage";
+import { IngestionPage } from "./pages/IngestionPage";
 import { MethodPage } from "./pages/MethodPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { PersonPage } from "./pages/PersonPage";
+import { RecordEditorPage } from "./pages/RecordEditorPage";
+import { RecordPage } from "./pages/RecordPage";
+import { RecordsPage } from "./pages/RecordsPage";
 import { SearchPage } from "./pages/SearchPage";
+import { StudioPage } from "./pages/StudioPage";
 import { TopicPage } from "./pages/TopicPage";
 import { YearPage } from "./pages/YearPage";
 
-const router = createBrowserRouter([
-  {
-    element: <AppShell />,
-    children: [
-      { path: "/", element: <HomePage /> },
-      { path: "/archives", element: <ArchivesPage /> },
-      { path: "/archives/:archiveNumber", element: <ArchivePage /> },
-      { path: "/drift", element: <DriftPage /> },
-      { path: "/search", element: <SearchPage /> },
-      { path: "/people/:slug", element: <PersonPage /> },
-      { path: "/topics/:slug", element: <TopicPage /> },
-      { path: "/years/:year", element: <YearPage /> },
-      { path: "/method", element: <MethodPage /> },
-      { path: "/corrections", element: <CorrectionsPage /> },
-      { path: "/admin", element: <AdminPage /> },
-      { path: "*", element: <NotFoundPage /> },
-    ],
-  },
-]);
-
-export function App() {
-  return <RouterProvider router={router} />;
-}
+const router=createBrowserRouter([{element:<AppShell/>,children:[
+  {path:"/",element:<HomePage/>},{path:"/records",element:<RecordsPage/>},{path:"/records/:recordNumber",element:<RecordPage/>},{path:"/drift",element:<DriftPage/>},{path:"/search",element:<SearchPage/>},{path:"/people/:slug",element:<PersonPage/>},{path:"/topics/:slug",element:<TopicPage/>},{path:"/years/:year",element:<YearPage/>},{path:"/method",element:<MethodPage/>},{path:"/corrections",element:<CorrectionsPage/>},
+  {path:"/studio",element:<StudioPage/>},{path:"/studio/new",element:<IngestionPage/>},{path:"/studio/records/:id",element:<RecordEditorPage/>},{path:"/studio/claim/:recordId",element:<ClaimPage/>},{path:"/studio/claims",element:<ClaimsPage/>},{path:"/director/accounts",element:<DirectorAccountsPage/>},{path:"*",element:<NotFoundPage/>},
+]}]);
+export function App(){return <RouterProvider router={router}/>}

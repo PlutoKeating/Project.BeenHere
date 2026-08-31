@@ -1,37 +1,33 @@
-import type { ApiEnvelope, ArchiveDetail, ArchiveSummary } from "../types";
+import type { Account, ApiEnvelope, ClaimRequest, EditableRecord, InterviewRecordDetail, InterviewRecordSummary, ManagedRecord, RecordDraft } from "../types";
 
-export class ApiError extends Error {
-  constructor(public readonly status: number, message: string) {
-    super(message);
-  }
-}
-
+export class ApiError extends Error { constructor(readonly status: number, message: string) { super(message); } }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { "content-type": "application/json", ...init?.headers },
-  });
-  const payload = await response.json() as ApiEnvelope<T> | { error?: { message?: string } };
-  if (!response.ok) {
-    const message = "error" in payload ? payload.error?.message : undefined;
-    throw new ApiError(response.status, message ?? "档案馆暂时无法完成请求。");
-  }
-  return (payload as ApiEnvelope<T>).data;
+  const response = await fetch(path, { ...init, headers: { "content-type": "application/json", ...init?.headers } });
+  const payload = await response.json().catch(() => null) as (ApiEnvelope<T> & { error?: { message?: string } }) | null;
+  if (!response.ok) throw new ApiError(response.status, payload?.error?.message ?? "暂时无法完成请求。");
+  return payload!.data;
 }
-
 export const api = {
-  meta: () => request<{ interviews: number; people: number; topics: number; years: number }>("/api/v1/meta"),
-  archives: () => request<{ items: ArchiveSummary[]; nextCursor: string | null }>("/api/v1/archives"),
-  archive: (number: string) => request<ArchiveDetail>(`/api/v1/archives/${encodeURIComponent(number)}`),
-  drift: (exclusions: string[] = []) => request<ArchiveSummary>(`/api/v1/drift?${new URLSearchParams(exclusions.map((value) => ["exclude", value])).toString()}`),
-  search: (query: string) => request<ArchiveSummary[]>(`/api/v1/search?q=${encodeURIComponent(query)}`),
-  person: (slug: string) => request<{ person: { slug: string; displayName: string; identityMode: string; bio: string }; interviews: ArchiveSummary[] }>(`/api/v1/people/${encodeURIComponent(slug)}`),
-  topic: (slug: string) => request<{ topic: { slug: string; name: string; description: string }; interviews: ArchiveSummary[] }>(`/api/v1/topics/${encodeURIComponent(slug)}`),
-  year: (year: string) => request<ArchiveSummary[]>(`/api/v1/years/${encodeURIComponent(year)}`),
-  submitCorrection: (body: object) => request<{ requestId: string; status: string }>("/api/v1/correction-requests", { method: "POST", body: JSON.stringify(body) }),
-  createDraft: (body: object) => request<{ interviewId: string; revision: number; status: string }>("/api/admin/interviews", {
-    method: "POST",
-    headers: location.hostname === "localhost" ? { "x-local-admin": "1" } : undefined,
-    body: JSON.stringify(body),
-  }),
+  meta: () => request<{ records: number; people: number; topics: number; years: number }>("/api/v1/meta"),
+  records: () => request<InterviewRecordSummary[]>("/api/v1/records"),
+  record: (number: string) => request<InterviewRecordDetail>(`/api/v1/records/${encodeURIComponent(number)}`),
+  drift: (exclusions: string[] = []) => request<InterviewRecordSummary>(`/api/v1/drift?${new URLSearchParams(exclusions.map((value) => ["exclude", value])).toString()}`),
+  search: (query: string) => request<InterviewRecordSummary[]>(`/api/v1/search?q=${encodeURIComponent(query)}`),
+  person: (slug: string) => request<{ person: { slug: string; displayName: string; identityMode: string; bio: string }; records: InterviewRecordSummary[] }>(`/api/v1/people/${encodeURIComponent(slug)}`),
+  topic: (slug: string) => request<{ topic: { slug: string; name: string; description: string }; records: InterviewRecordSummary[] }>(`/api/v1/topics/${encodeURIComponent(slug)}`),
+  year: (year: string) => request<InterviewRecordSummary[]>(`/api/v1/years/${encodeURIComponent(year)}`),
+  correction: (body: object) => request<{ requestId: string }>("/api/v1/correction-requests", { method: "POST", body: JSON.stringify(body) }),
+  me: () => request<Account>("/api/account/me"),
+  updateProfile: (displayName: string) => request<Account>("/api/account/me", { method: "PATCH", body: JSON.stringify({ displayName }) }),
+  managedRecords: () => request<ManagedRecord[]>("/api/account/records"),
+  createRecord: (draft: RecordDraft) => request<{ recordId: string; revision: number }>("/api/account/records", { method: "POST", body: JSON.stringify(draft) }),
+  editableRecord: (id: string) => request<EditableRecord>(`/api/account/records/${encodeURIComponent(id)}`),
+  updateRecord: (id: string, expectedRevision: number, draft: RecordDraft) => request<{ recordId: string; revision: number }>(`/api/account/records/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ expectedRevision, draft }) }),
+  publishRecord: (id: string, changeSummary: string) => request<{ recordId: string; recordNumber: string; edition: number }>(`/api/account/records/${encodeURIComponent(id)}/publish`, { method: "POST", body: JSON.stringify({ changeSummary }) }),
+  deleteRecord: (id: string, reason: string) => request<{ status: string }>(`/api/account/records/${encodeURIComponent(id)}`, { method: "DELETE", body: JSON.stringify({ reason }) }),
+  submitClaim: (recordId: string, requestText: string) => request<{ claimId: string }>(`/api/account/records/${encodeURIComponent(recordId)}/claim`, { method: "POST", body: JSON.stringify({ requestText }) }),
+  claims: () => request<{ received: ClaimRequest[]; sent: ClaimRequest[] }>("/api/account/claims"),
+  reviewClaim: (id: string, decision: "approved" | "rejected", note: string) => request<{ status: string }>(`/api/account/claims/${encodeURIComponent(id)}/review`, { method: "POST", body: JSON.stringify({ decision, note }) }),
+  accounts: () => request<Account[]>("/api/director/accounts"),
+  setAccountStatus: (id: string, status: "active" | "suspended") => request<{ status: string }>(`/api/director/accounts/${encodeURIComponent(id)}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
 };

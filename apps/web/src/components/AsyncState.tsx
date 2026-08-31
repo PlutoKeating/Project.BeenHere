@@ -1,4 +1,4 @@
-export function LoadingState({ label = "正在翻找档案…" }: { label?: string }) {
+export function LoadingState({ label = "正在翻找采访记录…" }: { label?: string }) {
   return (
     <div className="flex min-h-64 items-center justify-center" role="status">
       <div className="text-center">
