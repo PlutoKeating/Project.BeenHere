@@ -21,8 +21,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "beenhere-archive",
-      "database_id": "2e304f82-d514-469f-b477-e0a6ac783daf",
+      "database_name": "beenhere-records",
+      "database_id": "fee89a5b-6281-496a-b4e9-18e8b96439c9",
       "migrations_dir": "migrations"
     }
   ],
