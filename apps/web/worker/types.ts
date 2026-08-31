@@ -6,6 +6,8 @@ export interface Env {
   ASSETS: Fetcher;
   APP_ENV: string;
   SITE_URL: string;
+  ACCESS_TEAM_DOMAIN?: string;
+  ACCESS_AUD?: string;
 }
 
 export interface ArchiveSummary {
@@ -31,10 +33,7 @@ export interface MessageUnit {
   parentUnitId: string | null;
 }
 
-export interface PublishedSnapshot {
-  story: string[];
-  editorialNote: string;
-}
+export type PublishedSnapshot = DraftSnapshot;
 
 export interface ArchiveDetail extends ArchiveSummary {
   edition: {
@@ -54,6 +53,7 @@ export interface ArchiveDetail extends ArchiveSummary {
 
 export interface DraftSnapshot {
   person: {
+    existingPersonId?: string;
     slug: string;
     displayName: string;
     identityMode: "real_name" | "pseudonym" | "anonymous";

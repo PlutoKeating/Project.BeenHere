@@ -35,7 +35,7 @@ export function DriftPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="archive-label text-blueprint">{data.archiveNumber}</p>
-                <p className="mt-2 text-xs text-ink-muted">{data.displayName} · {new Date(data.conductedAt).toLocaleDateString("zh-CN")}</p>
+                <p className="mt-2 font-mono text-xs text-ink-muted">{data.displayName} · {new Date(data.conductedAt).toLocaleDateString("zh-CN")}</p>
               </div>
               <ArchiveSeal small />
             </div>

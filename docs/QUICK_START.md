@@ -54,3 +54,5 @@ npm run deploy
 - Secret `CLOUDFLARE_API_TOKEN`
 
 Token 只应授予此账号的 Workers Scripts Write、D1 Write、Workers Routes Write。不要上传本机 Wrangler OAuth token。
+
+编辑后台还需先在 Cloudflare Zero Trust 创建 Access self-hosted application，并设置 Worker secrets `ACCESS_TEAM_DOMAIN` 与 `ACCESS_AUD`。Worker 会验证 Access JWT 的签名、签发者、受众和有效期；未配置时生产后台默认关闭。

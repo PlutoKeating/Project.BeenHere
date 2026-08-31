@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ArchiveRepository } from "./archive-repository";
 import { EditorialModule, PublicationModule } from "./editorial";
+import { GovernanceModule } from "./governance";
 import { errorResponse, HttpError, json, methodNotAllowed, parseBody, requireAdmin, routeId } from "./http";
 import type { DraftSnapshot, Env } from "./types";
 
@@ -11,6 +12,7 @@ const slug = z.string().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "slug
 
 const draftSchema: z.ZodType<DraftSnapshot> = z.object({
   person: z.object({
+    existingPersonId: z.string().min(1).optional(),
     slug,
     displayName: z.string().trim().min(1).max(80),
     identityMode,
@@ -69,7 +71,7 @@ async function publicApi(request: Request, env: Env, url: URL): Promise<Response
 
   if (url.pathname === "/api/v1/meta") {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
-    return json({ data: await repository.meta() }, { headers: { "cache-control": "public, max-age=60" } });
+    return json({ data: await repository.meta() });
   }
   if (url.pathname === "/api/v1/archives") {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
@@ -112,23 +114,14 @@ async function publicApi(request: Request, env: Env, url: URL): Promise<Response
   if (url.pathname === "/api/v1/correction-requests") {
     if (request.method !== "POST") return methodNotAllowed(["POST"]);
     const body = await parseBody(request, correctionSchema);
-    const interview = body.archiveNumber
-      ? await env.DB.prepare("SELECT id FROM interviews WHERE archive_number = ?").bind(body.archiveNumber).first<{ id: string }>()
-      : null;
-    if (body.archiveNumber && !interview) throw new HttpError(404, "archive_not_found", "没有找到对应档案。\n");
-    const requestId = `correction-${crypto.randomUUID()}`;
-    await env.DB.prepare(`INSERT INTO correction_requests
-      (id, interview_id, requester_contact, requester_role, kind, description) VALUES (?, ?, ?, ?, ?, ?)`)
-      .bind(requestId, interview?.id ?? null, body.requesterContact, body.requesterRole, body.kind, body.description)
-      .run();
-    return json({ data: { requestId, status: "submitted" } }, { status: 201 });
+    return json({ data: await new GovernanceModule(env.DB).submitCorrection(body) }, { status: 201 });
   }
   return null;
 }
 
 async function adminApi(request: Request, env: Env, url: URL): Promise<Response | null> {
   if (!url.pathname.startsWith("/api/admin/")) return null;
-  const actor = requireAdmin(request);
+  const actor = await requireAdmin(request, env);
   const editorial = new EditorialModule(env.DB);
   const publication = new PublicationModule(env.DB);
 

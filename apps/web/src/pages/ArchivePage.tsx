@@ -32,7 +32,7 @@ export function ArchivePage() {
             <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-muted">
               <Link to={`/people/${data.personSlug}`} className="text-blueprint hover:underline">{data.displayName}</Link>
               <span aria-hidden="true">·</span>
-              <time dateTime={data.conductedAt}>{new Date(data.conductedAt).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}</time>
+              <time className="font-mono" dateTime={data.conductedAt}>{new Date(data.conductedAt).toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" })}</time>
               <span aria-hidden="true">·</span>
               <span>{data.units.length} 个记录单元</span>
             </div>

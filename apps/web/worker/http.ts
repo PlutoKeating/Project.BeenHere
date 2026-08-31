@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import type { Env } from "./types";
 
 const securityHeaders = {
   "content-type": "application/json; charset=utf-8",
@@ -63,15 +64,75 @@ export function errorResponse(error: unknown): Response {
   );
 }
 
-export function requireAdmin(request: Request): string {
-  const email = request.headers.get("cf-access-authenticated-user-email");
-  if (email) return email;
+type AccessClaims = {
+  aud?: string | string[];
+  email?: string;
+  exp?: number;
+  iss?: string;
+  nbf?: number;
+};
 
+type AccessKey = JsonWebKey & { kid?: string };
+
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+async function verifyAccessJwt(token: string, teamDomain: string, expectedAudience: string): Promise<AccessClaims> {
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
+
+  let header: { alg?: string; kid?: string };
+  let claims: AccessClaims;
+  try {
+    header = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0]!))) as typeof header;
+    claims = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[1]!))) as AccessClaims;
+  } catch {
+    throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
+  }
+  if (header.alg !== "RS256" || !header.kid) {
+    throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
+  }
+
+  const origin = teamDomain.startsWith("https://") ? teamDomain.replace(/\/$/, "") : `https://${teamDomain.replace(/\/$/, "")}`;
+  const response = await fetch(`${origin}/cdn-cgi/access/certs`);
+  if (!response.ok) throw new HttpError(503, "access_verification_unavailable", "暂时无法验证编辑者身份。\n");
+  const certificateSet = await response.json<{ keys?: AccessKey[] }>();
+  const jwk = certificateSet.keys?.find((candidate) => candidate.kid === header.kid);
+  if (!jwk) throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
+
+  const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  const validSignature = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    decodeBase64Url(parts[2]!),
+    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+  );
+  const now = Math.floor(Date.now() / 1000);
+  const audiences = Array.isArray(claims.aud) ? claims.aud : claims.aud ? [claims.aud] : [];
+  if (!validSignature || !claims.email || !claims.exp || claims.exp <= now
+    || (claims.nbf !== undefined && claims.nbf > now) || claims.iss !== origin
+    || !audiences.includes(expectedAudience)) {
+    throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
+  }
+  return claims;
+}
+
+export async function requireAdmin(request: Request, env: Env): Promise<string> {
   const url = new URL(request.url);
   const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
   if (local && request.headers.get("x-local-admin") === "1") return "local-editor";
 
-  throw new HttpError(401, "admin_auth_required", "编辑工作台需要 Cloudflare Access 身份。\n");
+  if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) {
+    throw new HttpError(503, "admin_auth_not_configured", "编辑工作台尚未配置 Cloudflare Access。\n");
+  }
+  const assertion = request.headers.get("cf-access-jwt-assertion");
+  if (!assertion) throw new HttpError(401, "admin_auth_required", "编辑工作台需要 Cloudflare Access 身份。\n");
+  return (await verifyAccessJwt(assertion, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD)).email!;
 }
 
 export function routeId(pathname: string, prefix: string): string | null {

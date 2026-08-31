@@ -398,7 +398,7 @@ GET  /api/v1/people/{slug}
 GET  /api/v1/topics/{slug}
 GET  /api/v1/years/{year}
 GET  /api/v1/search?q=&topic=&year=&cursor=
-POST /api/v1/corrections
+POST /api/v1/correction-requests
 
 POST  /api/admin/interviews
 PATCH /api/admin/interviews/{id}/draft

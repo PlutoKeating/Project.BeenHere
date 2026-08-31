@@ -20,6 +20,12 @@ export class EditorialModule {
     const interviewId = id("interview");
     const now = new Date().toISOString();
     const existingPerson = await this.db.prepare("SELECT id FROM people WHERE slug = ?").bind(snapshot.person.slug).first<{ id: string }>();
+    if (existingPerson && snapshot.person.existingPersonId !== existingPerson.id) {
+      throw new HttpError(409, "person_confirmation_required", "该人物路径已存在；必须显式确认人物记录后再关联。\n");
+    }
+    if (!existingPerson && snapshot.person.existingPersonId) {
+      throw new HttpError(404, "person_not_found", "指定的人物记录不存在。\n");
+    }
     const resolvedPersonId = existingPerson?.id ?? personId;
 
     const statements: D1PreparedStatement[] = [];
@@ -115,8 +121,15 @@ export class PublicationModule {
     if (draft.status !== "approved") throw new HttpError(409, "not_approved", "采访必须先完成受访者确认与审核。\n");
     const interview = await this.db.prepare("SELECT archive_number, current_edition_id FROM interviews WHERE id = ?").bind(interviewId).first<{ archive_number: string | null; current_edition_id: string | null }>();
     if (!interview) throw new HttpError(404, "interview_not_found", "没有找到采访。\n");
+    if (interview.current_edition_id) {
+      throw new HttpError(409, "revision_workflow_required", "已发布档案必须通过修订工作流创建新版本。\n");
+    }
     const consent = await this.db.prepare("SELECT id FROM consent_grants WHERE interview_id = ? AND revoked_at IS NULL ORDER BY granted_at DESC LIMIT 1").bind(interviewId).first<{ id: string }>();
     if (!consent) throw new HttpError(409, "consent_missing", "没有有效 Consent Grant。\n");
+    const approval = await this.db.prepare("SELECT actor FROM audit_events WHERE target_type = 'interview' AND target_id = ? AND action = 'interview.approved' ORDER BY created_at DESC LIMIT 1")
+      .bind(interviewId).first<{ actor: string }>();
+    if (!approval) throw new HttpError(409, "approval_missing", "没有找到审核记录。\n");
+    if (approval.actor === actor) throw new HttpError(409, "second_reviewer_required", "发布者不能与批准者为同一人。\n");
 
     let archiveNumber = interview.archive_number;
     if (!archiveNumber) {
@@ -135,7 +148,7 @@ export class PublicationModule {
       this.db.prepare(`INSERT INTO published_editions
         (id, interview_id, edition_number, snapshot, change_summary, approved_by, published_by, consent_grant_id, published_at, supersedes_id, content_hash)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(editionId, interviewId, editionNumber, JSON.stringify({ story: snapshot.story, editorialNote: snapshot.editorialNote }), changeSummary, actor, actor, consent.id, now, interview.current_edition_id, contentHash),
+        .bind(editionId, interviewId, editionNumber, draft.snapshot, changeSummary, approval.actor, actor, consent.id, now, interview.current_edition_id, contentHash),
       this.db.prepare(`UPDATE interviews SET archive_number = ?, current_edition_id = ?, editorial_state = 'published', visibility = 'public', updated_at = ? WHERE id = ?`)
         .bind(archiveNumber, editionId, now, interviewId),
       this.db.prepare(`INSERT INTO audit_events (id, actor, action, target_type, target_id, reason, after_hash, created_at) VALUES (?, ?, 'edition.published', 'interview', ?, ?, ?, ?)`)
