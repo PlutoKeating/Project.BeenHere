@@ -1,0 +1,187 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme inline {
+  --color-canvas: var(--surface-canvas);
+  --color-card: var(--surface-card);
+  --color-subtle: var(--surface-subtle);
+  --color-muted: var(--surface-muted);
+  --color-strong: var(--surface-strong);
+  --color-ink: var(--text-primary);
+  --color-ink-muted: var(--text-secondary);
+  --color-inverse: var(--text-inverse);
+  --color-line: var(--border-subtle);
+  --color-line-strong: var(--border-strong);
+  --color-seal: var(--accent-seal);
+  --color-seal-hover: var(--accent-seal-hover);
+  --color-blueprint: var(--accent-link);
+  --color-blueprint-muted: var(--accent-link-muted);
+  --color-danger: var(--status-error);
+  --color-danger-surface: var(--status-error-surface);
+  --font-serif: "Noto Serif SC", "Songti SC", serif;
+  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+  --radius-paper: var(--radius-default);
+  --shadow-paper: var(--shadow-paper);
+  --breakpoint-tablet: 48rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html {
+    background: var(--surface-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100dvh;
+    margin: 0;
+    background-color: var(--surface-canvas);
+    background-image: radial-gradient(rgb(74 70 64 / 0.035) 0.6px, transparent 0.6px);
+    background-size: 5px 5px;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent-seal) 22%, transparent);
+  }
+}
+
+@layer components {
+  .page-shell {
+    width: min(100%, 1140px);
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .reading-column {
+    width: min(100%, 720px);
+    margin-inline: auto;
+  }
+
+  .archive-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .paper-card {
+    border: 1px solid var(--card-border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-paper);
+  }
+
+  .button-primary,
+  .button-secondary {
+    display: inline-flex;
+    min-height: 2.875rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    border-radius: var(--radius-default);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: transform var(--duration-fast), background var(--duration-fast), color var(--duration-fast);
+  }
+
+  .button-primary {
+    background: var(--button-primary-bg);
+    color: var(--button-primary-text);
+  }
+
+  .button-primary:hover {
+    transform: translateY(-1px);
+  }
+
+  .button-primary:active {
+    transform: translateY(0);
+  }
+
+  .button-secondary {
+    border: 1px solid var(--button-secondary-border);
+    background: var(--button-secondary-bg);
+    color: var(--text-primary);
+  }
+
+  .button-secondary:hover {
+    background: var(--surface-subtle);
+  }
+
+  .field {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--input-border);
+    border-radius: 0;
+    background: transparent;
+    padding: 0.75rem 0.125rem;
+    color: var(--text-primary);
+  }
+
+  .field::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.72;
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .page-enter {
+    animation: page-enter var(--duration-slow) ease-out both;
+  }
+}
+
+@media (min-width: 768px) {
+  .page-shell {
+    padding-inline: 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

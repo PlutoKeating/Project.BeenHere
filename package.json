@@ -1,0 +1,23 @@
+{
+  "name": "project-been-here",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @beenhere/web",
+    "build": "npm run build --workspace @beenhere/web",
+    "typecheck": "npm run typecheck --workspace @beenhere/web",
+    "test": "npm run test --workspace @beenhere/web",
+    "check": "npm run typecheck && npm run test && npm run build",
+    "deploy": "npm run deploy --workspace @beenhere/web",
+    "cf:typegen": "npm run cf:typegen --workspace @beenhere/web",
+    "db:migrate:local": "npm run db:migrate:local --workspace @beenhere/web",
+    "db:migrate:remote": "npm run db:migrate:remote --workspace @beenhere/web",
+    "db:seed:local": "npm run db:seed:local --workspace @beenhere/web"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
