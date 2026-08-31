@@ -4,7 +4,7 @@ export type SourceType = "douyin" | "social_media" | "in_person" | "direct" | "o
 export type MessageKind = "question" | "answer" | "image" | "pause" | "note" | "section";
 export type SpeakerRole = "interviewer" | "participant" | "recorder" | "system";
 
-export interface Account { id: string; email: string; displayName: string; role: AccountRole; status: "active" | "suspended" }
+export interface Account { id: string; email: string; displayName: string; role: AccountRole; status: "pending" | "active" | "suspended" | "deleted" }
 export interface InterviewRecordSummary { id: string; recordNumber: string; title: string; excerpt: string; conductedAt: string; displayName: string; personSlug: string; identityMode: "real_name" | "pseudonym" | "anonymous"; topics: Array<{ slug: string; name: string }> }
 export interface ConversationUnit { id?: string; sequence: number; kind: MessageKind; speakerRole: SpeakerRole; body: string; occurredAt: string | null; durationSeconds: number | null; parentUnitId: string | null }
 export interface RecordDraft {

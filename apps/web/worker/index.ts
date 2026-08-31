@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { AccountModule } from "./accounts";
 import { GovernanceModule } from "./governance";
-import { errorResponse, HttpError, json, methodNotAllowed, parseBody, requireIdentity, secureAssetResponse } from "./http";
+import { clearSessionCookie, errorResponse, HttpError, json, methodNotAllowed, parseBody, requireSameOrigin, secureAssetResponse, setSessionCookie } from "./http";
 import { RecordManagementModule } from "./record-management";
 import { RecordRepository } from "./record-repository";
-import type { Env, RecordDraft } from "./types";
+import type { Account, Env, RecordDraft } from "./types";
 
 const slug = z.string().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const webUrl = z.url().refine((value) => value.startsWith("https://") || value.startsWith("http://"), "链接必须使用 http 或 https。");
@@ -48,6 +48,41 @@ const correctionSchema = z.object({
   kind: z.enum(["fact", "identity", "privacy", "consent", "supplement", "topic", "withdrawal"]),
   description: z.string().trim().min(10).max(4000),
 });
+const emailSchema = z.email().max(254).transform((value) => value.trim().toLowerCase());
+const passwordSchema = z.string().min(12, "密码至少需要 12 个字符。").max(128);
+const tokenSchema = z.string().min(40).max(200);
+
+async function authApi(request: Request, env: Env, url: URL): Promise<Response | null> {
+  if (!url.pathname.startsWith("/api/auth/")) return null;
+  const accounts = new AccountModule(env.DB, env);
+  if (url.pathname === "/api/auth/register" && request.method === "POST") {
+    await accounts.rateLimit(request, "register", 4);
+    const body = await parseBody(request, z.object({ email: emailSchema, displayName: z.string().trim().min(2).max(40), password: passwordSchema }));
+    await accounts.register(body.email, body.displayName, body.password);
+    return json({ data: { message: "验证邮件已发送，请在 30 分钟内完成验证。" } }, { status: 202 });
+  }
+  if (url.pathname === "/api/auth/verify-email" && request.method === "POST") {
+    const body = await parseBody(request, z.object({ token: tokenSchema })); const result = await accounts.verifyEmail(body.token);
+    return json({ data: result.account }, { headers: { "set-cookie": setSessionCookie(result.token) } });
+  }
+  if (url.pathname === "/api/auth/login" && request.method === "POST") {
+    await accounts.rateLimit(request, "login", 8);
+    const body = await parseBody(request, z.object({ email: emailSchema, password: z.string().min(1).max(128) })); const result = await accounts.login(body.email, body.password);
+    return json({ data: result.account }, { headers: { "set-cookie": setSessionCookie(result.token) } });
+  }
+  if (url.pathname === "/api/auth/logout" && request.method === "POST") { await accounts.logout(request); return json({ data: { status: "signed_out" } }, { headers: { "set-cookie": clearSessionCookie() } }); }
+  if (url.pathname === "/api/auth/forgot-password" && request.method === "POST") {
+    await accounts.rateLimit(request, "forgot", 4); const body = await parseBody(request, z.object({ email: emailSchema })); await accounts.forgotPassword(body.email);
+    return json({ data: { message: "如果账户存在，重设邮件已经发出。" } }, { status: 202 });
+  }
+  if (url.pathname === "/api/auth/reset-password" && request.method === "POST") {
+    const body = await parseBody(request, z.object({ token: tokenSchema, password: passwordSchema })); const result = await accounts.resetPassword(body.token, body.password);
+    return json({ data: result.account }, { headers: { "set-cookie": setSessionCookie(result.token) } });
+  }
+  if (url.pathname === "/api/auth/confirm-email-change" && request.method === "POST") { const body = await parseBody(request, z.object({ token: tokenSchema })); await accounts.confirmEmailChange(body.token); return json({ data: { status: "email_changed" } }, { headers: { "set-cookie": clearSessionCookie() } }); }
+  if (url.pathname === "/api/auth/confirm-deletion" && request.method === "POST") { const body = await parseBody(request, z.object({ token: tokenSchema })); await accounts.confirmDeletion(body.token); return json({ data: { status: "account_deleted" } }, { headers: { "set-cookie": clearSessionCookie() } }); }
+  return methodNotAllowed(["POST"]);
+}
 
 async function publicRateLimitId(request: Request): Promise<string> {
   const ip = request.headers.get("cf-connecting-ip") ?? "local";
@@ -110,7 +145,7 @@ async function publicApi(request: Request, env: Env, url: URL): Promise<Response
   return null;
 }
 
-async function accountRecordRoute(request: Request, url: URL, records: RecordManagementModule, account: Awaited<ReturnType<AccountModule["resolve"]>>): Promise<Response> {
+async function accountRecordRoute(request: Request, url: URL, records: RecordManagementModule, account: Account): Promise<Response> {
   const recordId = segment(url.pathname, "/api/account/records/");
   if (!recordId) throw new HttpError(400, "record_id_required", "缺少采访记录 ID。\n");
   const base = `/api/account/records/${encodeURIComponent(recordId)}`;
@@ -139,17 +174,30 @@ async function accountRecordRoute(request: Request, url: URL, records: RecordMan
 async function accountApi(request: Request, env: Env, url: URL): Promise<Response | null> {
   if (!url.pathname.startsWith("/api/account/") && !url.pathname.startsWith("/api/director/")) return null;
   const accounts = new AccountModule(env.DB, env);
-  const account = await accounts.resolve(await requireIdentity(request, env));
+  const account = await accounts.authenticate(request);
   const records = new RecordManagementModule(env.DB);
 
   if (url.pathname === "/api/account/me") {
     if (request.method === "GET") return json({ data: account });
     if (request.method === "PATCH") {
-      const body = await parseBody(request, z.object({ displayName: z.string().trim().min(1).max(80) }));
+      const body = await parseBody(request, z.object({ displayName: z.string().trim().min(2).max(40) }));
       return json({ data: await accounts.updateProfile(account, body.displayName) });
     }
     return methodNotAllowed(["GET", "PATCH"]);
   }
+  if (url.pathname === "/api/account/password" && request.method === "PATCH") {
+    await accounts.rateLimit(request, `password-change:${account.id}`, 5);
+    const body = await parseBody(request, z.object({ currentPassword: z.string().min(1).max(128), newPassword: passwordSchema }));
+    const token = await accounts.changePassword(account, body.currentPassword, body.newPassword);
+    return json({ data: { status: "password_changed" } }, { headers: { "set-cookie": setSessionCookie(token) } });
+  }
+  if (url.pathname === "/api/account/email" && request.method === "PATCH") {
+    await accounts.rateLimit(request, `email-change:${account.id}`, 3);
+    const body = await parseBody(request, z.object({ currentPassword: z.string().min(1).max(128), newEmail: emailSchema }));
+    await accounts.requestEmailChange(account, body.currentPassword, body.newEmail);
+    return json({ data: { message: "验证邮件已发送到新邮箱。" } }, { status: 202 });
+  }
+  if (url.pathname === "/api/account/deletion" && request.method === "POST") { await accounts.rateLimit(request, `deletion:${account.id}`, 3); await accounts.requestDeletion(account); return json({ data: { message: "删除确认邮件已发送。" } }, { status: 202 }); }
   if (url.pathname === "/api/account/records") {
     if (request.method === "GET") return json({ data: await records.mine(account) });
     if (request.method === "POST") return json({ data: await records.create(await parseBody(request, draftSchema), account) }, { status: 201 });
@@ -186,7 +234,10 @@ async function accountApi(request: Request, env: Env, url: URL): Promise<Respons
 async function handle(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
+  requireSameOrigin(request, env.SITE_URL, env.APP_ENV === "development");
   if (url.pathname === "/api/health") return json({ status: "ok", service: "project-been-here" });
+  const authResponse = await authApi(request, env, url);
+  if (authResponse) return authResponse;
   const publicResponse = await publicApi(request, env, url);
   if (publicResponse) return publicResponse;
   const accountResponse = await accountApi(request, env, url);

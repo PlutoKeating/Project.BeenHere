@@ -77,75 +77,24 @@ export function errorResponse(error: unknown): Response {
   );
 }
 
-type AccessClaims = {
-  aud?: string | string[];
-  email?: string;
-  exp?: number;
-  iss?: string;
-  nbf?: number;
-};
-
-type AccessKey = JsonWebKey & { kid?: string };
-
-function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
+export function sessionCookie(request: Request): string | null {
+  const match = request.headers.get("cookie")?.match(/(?:^|;\s*)bh_session=([^;]+)/);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
-async function verifyAccessJwt(token: string, teamDomain: string, expectedAudience: string): Promise<AccessClaims> {
-  const parts = token.split(".");
-  if (parts.length !== 3) throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
-
-  let header: { alg?: string; kid?: string };
-  let claims: AccessClaims;
-  try {
-    header = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[0]!))) as typeof header;
-    claims = JSON.parse(new TextDecoder().decode(decodeBase64Url(parts[1]!))) as AccessClaims;
-  } catch {
-    throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
-  }
-  if (header.alg !== "RS256" || !header.kid) {
-    throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
-  }
-
-  const origin = teamDomain.startsWith("https://") ? teamDomain.replace(/\/$/, "") : `https://${teamDomain.replace(/\/$/, "")}`;
-  const response = await fetch(`${origin}/cdn-cgi/access/certs`);
-  if (!response.ok) throw new HttpError(503, "access_verification_unavailable", "暂时无法验证编辑者身份。\n");
-  const certificateSet = await response.json<{ keys?: AccessKey[] }>();
-  const jwk = certificateSet.keys?.find((candidate) => candidate.kid === header.kid);
-  if (!jwk) throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
-
-  const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
-  const validSignature = await crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    decodeBase64Url(parts[2]!),
-    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
-  );
-  const now = Math.floor(Date.now() / 1000);
-  const audiences = Array.isArray(claims.aud) ? claims.aud : claims.aud ? [claims.aud] : [];
-  if (!validSignature || !claims.email || !claims.exp || claims.exp <= now
-    || (claims.nbf !== undefined && claims.nbf > now) || claims.iss !== origin
-    || !audiences.includes(expectedAudience)) {
-    throw new HttpError(401, "invalid_access_token", "Cloudflare Access 凭据无效。\n");
-  }
-  return claims;
+export function setSessionCookie(token: string): string {
+  return `bh_session=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`;
 }
 
-export async function requireIdentity(request: Request, env: Env): Promise<string> {
-  const url = new URL(request.url);
-  const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  if (env.APP_ENV === "development" && local && request.headers.get("x-local-user-email")) return request.headers.get("x-local-user-email")!;
+export function clearSessionCookie(): string {
+  return "bh_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
+}
 
-  if (!env.ACCESS_TEAM_DOMAIN || !env.ACCESS_AUD) {
-    throw new HttpError(503, "account_auth_not_configured", "账户登录尚未配置 Cloudflare Access。\n");
-  }
-  const assertion = request.headers.get("cf-access-jwt-assertion");
-  if (!assertion) throw new HttpError(401, "account_auth_required", "此操作需要登录。\n");
-  return (await verifyAccessJwt(assertion, env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD)).email!;
+export function requireSameOrigin(request: Request, siteUrl: string, development = false): void {
+  if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+  const origin = request.headers.get("origin");
+  if (development && origin && ["localhost", "127.0.0.1"].includes(new URL(origin).hostname)) return;
+  if (origin !== new URL(siteUrl).origin) throw new HttpError(403, "invalid_origin", "请求来源无效。");
 }
 
 export function routeId(pathname: string, prefix: string): string | null {

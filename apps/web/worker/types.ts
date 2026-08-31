@@ -7,9 +7,13 @@ export interface Env {
   ASSETS: Fetcher;
   APP_ENV: string;
   SITE_URL: string;
-  ACCESS_TEAM_DOMAIN?: string;
-  ACCESS_AUD?: string;
   SUPERADMIN_EMAILS?: string;
+  SESSION_SECRET: string;
+  SMTP_HOST: string;
+  SMTP_PORT: string;
+  SMTP_USERNAME: string;
+  SMTP_PASSWORD: string;
+  SMTP_FROM_NAME?: string;
 }
 
 export interface Account {
@@ -17,7 +21,7 @@ export interface Account {
   email: string;
   displayName: string;
   role: AccountRole;
-  status: "active" | "suspended";
+  status: "pending" | "active" | "suspended" | "deleted";
 }
 
 export interface InterviewRecordSummary {

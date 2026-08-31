@@ -28,7 +28,10 @@
   ],
   "vars": {
     "APP_ENV": "production",
-    "SITE_URL": "https://beenhere.arr2018.dpdns.org"
+    "SITE_URL": "https://beenhere.arr2018.dpdns.org",
+    "SMTP_HOST": "smtp.yeah.net",
+    "SMTP_PORT": "465",
+    "SMTP_FROM_NAME": "来过"
   },
   "observability": {
     "enabled": true,

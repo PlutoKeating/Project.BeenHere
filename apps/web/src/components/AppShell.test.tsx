@@ -17,9 +17,9 @@ describe("mobile navigation", () => {
     expect(renderShell()).toContain('aria-label="移动端底部导航"');
   });
 
-  it("uses a document navigation for the Access-protected account entry", () => {
+  it("keeps native account navigation inside the application", () => {
     const accountLinks = [...renderShell().matchAll(/<a[^>]*href="\/studio"[^>]*>/g)].map(([tag]) => tag);
     expect(accountLinks.length).toBeGreaterThan(0);
-    expect(accountLinks.every((tag) => tag.includes('data-navigation="document"'))).toBe(true);
+    expect(accountLinks.every((tag) => !tag.includes('data-navigation="document"'))).toBe(true);
   });
 });

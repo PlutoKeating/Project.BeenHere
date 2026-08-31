@@ -10,7 +10,7 @@ const navigation = [
 ];
 
 function AccountLink({ className, children, onClick }: { className?: string; children: React.ReactNode; onClick?: () => void }) {
-  return <a href="/studio" className={className} onClick={onClick} data-navigation="document">{children}</a>;
+  return <NavLink to="/studio" className={className} onClick={onClick}>{children}</NavLink>;
 }
 
 function DesktopNav() {

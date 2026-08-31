@@ -4,12 +4,42 @@ CREATE TABLE accounts (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   display_name TEXT NOT NULL,
+  password_credential TEXT,
+  email_verified_at TEXT,
   role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'director')),
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended', 'deleted')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  last_seen_at TEXT,
+  deleted_at TEXT
 );
+
+CREATE TABLE account_sessions (
+  token_hash TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(id),
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX account_sessions_account_idx ON account_sessions(account_id, expires_at);
+
+CREATE TABLE account_actions (
+  token_hash TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL REFERENCES accounts(id),
+  kind TEXT NOT NULL CHECK (kind IN ('verify_email', 'reset_password', 'change_email', 'delete_account')),
+  payload TEXT NOT NULL DEFAULT '{}',
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  consumed_at TEXT
+);
+CREATE INDEX account_actions_account_idx ON account_actions(account_id, kind, expires_at);
+
+CREATE TABLE auth_rate_limits (
+  id TEXT PRIMARY KEY,
+  request_count INTEGER NOT NULL DEFAULT 1,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX auth_rate_limits_expiry_idx ON auth_rate_limits(expires_at);
 
 CREATE TABLE people (
   id TEXT PRIMARY KEY,
