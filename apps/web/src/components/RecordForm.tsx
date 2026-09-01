@@ -1,7 +1,11 @@
 import { ArrowLeftRight, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { parsePastedConversation } from "../lib/conversation";
+import type { OcrConversationResult } from "../lib/ocr-conversation";
 import type { InterviewMessage, RecordDraft, SourceType } from "../types";
+import { OcrImportPanel } from "./OcrImportPanel";
+
+type EditableMessage = InterviewMessage & { confidence?: number };
 
 const emptyMessage = (speakerRole: InterviewMessage["speakerRole"]): InterviewMessage => ({ speakerRole, body: "" });
 
@@ -20,7 +24,17 @@ export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?:
   const [parseNotice, setParseNotice] = useState<string | null>(null);
 
   function updateMessage(index: number, patch: Partial<InterviewMessage>) {
-    setDraft((current) => ({ ...current, messages: current.messages.map((message, currentIndex) => currentIndex === index ? { ...message, ...patch } : message) }));
+    setDraft((current) => ({ ...current, messages: current.messages.map((message, currentIndex) => currentIndex === index ? { ...message, ...patch, ...(patch.body === undefined ? {} : { confidence: undefined }) } : message) }));
+  }
+
+  function importScreenshots(result: OcrConversationResult) {
+    setDraft((current) => ({ ...current, messages: result.messages }));
+    const notes = [
+      result.excludedLineCount ? `已排除 ${result.excludedLineCount} 行居中或无效文字` : null,
+      result.lowConfidenceMessageCount ? `${result.lowConfidenceMessageCount} 条低置信度消息已标出` : null,
+      result.truncatedMessageCount ? `超出上限的 ${result.truncatedMessageCount} 条消息未导入` : null,
+    ].filter(Boolean).join("；");
+    setParseNotice(`已识别 ${result.messages.length} 条消息${notes ? `，${notes}` : ""}。请检查双方归属。`);
   }
 
   function importConversation() {
@@ -45,7 +59,7 @@ export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?:
     await onSubmit({
       ...draft,
       participant: { ...draft.participant, displayName: draft.participant.displayName.trim() },
-      messages: draft.messages.map((message) => ({ ...message, body: message.body.trim() })).filter((message) => message.body),
+      messages: draft.messages.map((message) => ({ speakerRole: message.speakerRole, body: message.body.trim() })).filter((message) => message.body),
       source: {
         ...draft.source,
         platformName: draft.source.platformName?.trim() || undefined,
@@ -56,10 +70,16 @@ export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?:
 
   return <form onSubmit={submit} className="space-y-8">
     <fieldset className="paper-card space-y-5 p-5 tablet:p-8">
-      <legend className="record-label px-2 text-seal">01 · 粘贴采访对话</legend>
-      <p className="text-sm leading-7 text-ink-muted">支持“我：…”与“对方：…”格式；没有角色标记时，将按采访者、被采访者交替识别。</p>
-      <textarea className="field min-h-44" value={pasted} onChange={(event) => setPasted(event.target.value)} placeholder={'我：你最近在想什么？\n对方：想去一个没有去过的地方。'} aria-label="粘贴采访对话" />
-      <button type="button" className="button-secondary" onClick={importConversation}><Sparkles size={16} />识别为消息气泡</button>
+      <legend className="record-label px-2 text-seal">01 · 导入采访对话</legend>
+      <OcrImportPanel onImport={importScreenshots} />
+      <details className="border-t border-line pt-5">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-blueprint">没有截图？粘贴纯文本</summary>
+        <div className="mt-4 space-y-4">
+          <p className="text-sm leading-7 text-ink-muted">支持“我：…”与“对方：…”格式；没有角色标记时，将按采访者、被采访者交替识别。</p>
+          <textarea className="field min-h-44" value={pasted} onChange={(event) => setPasted(event.target.value)} placeholder={'我：你最近在想什么？\n对方：想去一个没有去过的地方。'} aria-label="粘贴采访对话" />
+          <button type="button" className="button-secondary" onClick={importConversation}><Sparkles size={16} />识别为消息气泡</button>
+        </div>
+      </details>
       {parseNotice && <p className="text-sm text-ink-muted" role="status">{parseNotice}</p>}
     </fieldset>
 
@@ -68,11 +88,14 @@ export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?:
       <div className="flex justify-end">
         <button type="button" className="button-secondary" onClick={swapRoles}><ArrowLeftRight size={16} />交换双方</button>
       </div>
-      {draft.messages.map((message, index) => <div key={index} className={`grid gap-3 border-b border-line pb-5 tablet:grid-cols-[130px_1fr_44px] ${message.speakerRole === "participant" ? "tablet:pl-16" : "tablet:pr-16"}`}>
+      {draft.messages.map((message: EditableMessage, index) => <div key={index} className={`grid gap-3 border-b border-line pb-5 tablet:grid-cols-[130px_1fr_44px] ${message.speakerRole === "participant" ? "tablet:pl-16" : "tablet:pr-16"}`}>
         <button type="button" className="field min-h-11 text-left" onClick={() => updateMessage(index, { speakerRole: message.speakerRole === "interviewer" ? "participant" : "interviewer" })} aria-label={`切换第 ${index + 1} 条消息的发言者`}>
           {message.speakerRole === "interviewer" ? "采访者" : "被采访者"}
         </button>
-        <textarea aria-label={`第 ${index + 1} 条消息内容`} className="field min-h-20" required value={message.body} onChange={(event) => updateMessage(index, { body: event.target.value })} />
+        <div>
+          <textarea aria-label={`第 ${index + 1} 条消息内容`} className={`field min-h-20 ${message.confidence !== undefined && message.confidence < 0.8 ? "border-seal" : ""}`} required value={message.body} onChange={(event) => updateMessage(index, { body: event.target.value })} />
+          {message.confidence !== undefined && message.confidence < 0.8 && <p className="mt-2 text-xs leading-5 text-seal">OCR 置信度较低，请重点核对这条文字。</p>}
+        </div>
         <button type="button" className="grid size-11 place-items-center text-ink-muted hover:text-danger" onClick={() => setDraft({ ...draft, messages: draft.messages.filter((_, currentIndex) => currentIndex !== index) })} aria-label="删除消息"><Trash2 size={17} /></button>
       </div>)}
       <button type="button" className="button-secondary" onClick={() => setDraft({ ...draft, messages: [...draft.messages, emptyMessage(draft.messages.at(-1)?.speakerRole === "interviewer" ? "participant" : "interviewer")] })}><Plus size={16} />添加消息</button>
