@@ -29,5 +29,5 @@
 ## 后果与边界
 
 - Wrangler 配置新增 `PRESENCE` binding 和声明式 SQLite Durable Object export；不需要 D1 migration。
-- 当前使用一个全局对象，适合产品早期规模。Cloudflare 当前单对象 WebSocket 上限为 32,768；接近容量或需要地域/匹配分区时，应引入分片房间和独立聚合层。
+- 当前使用一个全局对象，适合产品早期规模。Cloudflare WebSocket Hibernation API 当前单 Durable Object 最多允许 32,768 条连接，实际 CPU/内存负载可能更早成为约束；接近容量或需要地域/匹配分区时，应引入分片房间和独立聚合层。限制来源见 [Durable Object State](https://developers.cloudflare.com/durable-objects/api/state/)。
 - 当前只实现人数。匹配意愿、账户认证、双盲分配、实时采访消息、断线恢复与内容落库必须作为后续独立设计，不得从“在线”状态推断。

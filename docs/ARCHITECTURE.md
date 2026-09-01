@@ -8,7 +8,7 @@
 flowchart TD
   Browser[移动端 / 平板 / 桌面浏览器]
   Domain[beenhere.arr2018.dpdns.org\nCloudflare Custom Domain]
-  Worker[Cloudflare Worker\nproject-been-here]
+  Worker[Cloudflare Worker\nproject-been-here / API]
   Assets[Workers Assets\nReact SPA]
   API[同源 API\n/api/*]
   Presence[Durable Object\nPresenceRoom]
@@ -17,9 +17,9 @@ flowchart TD
   D1[(Cloudflare D1\nbeenhere-records)]
   SMTP[Yeah SMTP\nTLS 465]
 
-  Browser -->|HTTPS| Domain --> Worker
-  Worker -->|非 API 请求| Assets
-  Worker -->|API 请求| API
+  Browser -->|HTTPS| Domain
+  Domain -->|静态与 SPA 导航| Assets
+  Domain -->|/api/*| Worker --> API
   API -->|WebSocket /api/presence| Presence
   API --> D1
   API -->|账户事务邮件| SMTP
@@ -27,24 +27,25 @@ flowchart TD
   OCR -->|仅下载静态运行资源| Models
 ```
 
-Worker 是唯一应用入口。`/api/*` 必须先经过 Worker；其他路径由 Workers Assets 提供静态文件，未知前端路径回退到 `index.html`，由 React Router 处理。浏览器不直连 D1 或 SMTP。OCR 是浏览器内计算：截图只传给本站静态提供的专用 Web Worker；该 Worker 从固定第三方地址下载模型与 WASM，但不向这些地址发送截图。
+`project-been-here` 是唯一 Cloudflare 部署单元，但静态与 API 有不同执行路径。`assets.run_worker_first=["/api/*"]` 使 `/api/*` 先进入 Worker 模块；已有静态文件及 SPA 导航由 Workers Assets 直接提供，未知前端路径按 `single-page-application` 回退到 `index.html`。因此静态安全头的事实源是 `public/_headers`，`worker/http.ts` 负责 API 和 Worker 回退响应。浏览器不直连 D1 或 SMTP。OCR 是浏览器内计算：截图只传给本站静态提供的专用 Web Worker；该 Worker 从固定第三方地址下载模型与 WASM，但不向这些地址发送截图。
 
 ## 2. 技术栈与源文件
 
 | 层 | 当前实现 | 配置或入口 |
 |---|---|---|
-| UI | React 19、React Router 7、Tailwind CSS 4、Lucide | `apps/web/src/` |
-| 构建 | Vite 8、Cloudflare Vite Plugin、TypeScript 7 | `apps/web/vite.config.ts` |
+| UI | React 19.2.8、React DOM 19.2.8、React Router 7.18.3、Tailwind CSS 4.3.3、Lucide React 1.38.0 | `apps/web/src/`、`package-lock.json` |
+| 构建 | Vite 8.2.2、Cloudflare Vite Plugin 1.54.2、TypeScript 7.0.2 | `apps/web/vite.config.ts`、`package-lock.json` |
 | API/计算 | Cloudflare Worker 模块化单体 | `apps/web/worker/index.ts` |
-| 验证 | Zod 4 | `worker/index.ts` 的请求 schema |
+| Worker 运行时 | compatibility date `2026-08-25`、`global_fetch_strictly_public`、Web Crypto、`cloudflare:sockets` | `apps/web/wrangler.jsonc` |
+| 验证 | Zod 4.5.4 | `worker/index.ts` 的请求 schema |
 | 数据 | Cloudflare D1 / SQLite | `apps/web/migrations/` |
 | 实时协调 | Cloudflare Durable Object / WebSocket Hibernation | `worker/presence.ts`、`wrangler.jsonc` |
-| 截图识别 | PaddleOCR.js 0.4.2 / PP-OCRv6 tiny / ONNX Runtime WASM | `src/lib/ocr.ts`、`src/lib/ocr-conversation.ts` |
+| 截图识别 | PaddleOCR.js 0.4.2 / PP-OCRv6 tiny / ONNX Runtime Web 1.24.3 WASM | `src/lib/ocr.ts`、`src/lib/ocr-conversation.ts` |
 | 邮件 | Worker TCP Socket → SMTP over TLS 465 | `worker/smtp.ts` |
-| 测试 | Vitest、JSDOM | `*.test.ts(x)` |
+| 测试 | Vitest 4.1.11（Node 环境；个别 DOM 测试显式使用 JSDOM 30.0.1） | `vitest.config.ts`、`*.test.ts(x)` |
 | 部署 | GitHub Actions、Wrangler 4.127.1 | `.github/workflows/ci.yml` |
 
-根 `package.json` 是 npm workspace 入口，当前只有 `apps/web` 一个 workspace 和一个部署单元。
+根 `package.json` 是 npm workspace 入口，当前只有 `apps/web` 一个 workspace 和一个部署单元。版本事实以 `package-lock.json` 的解析结果为准；`package.json` 中使用范围声明的依赖不应被文档误写成永久固定版本。
 
 ## 3. 请求与安全边界
 
@@ -72,7 +73,7 @@ sequenceDiagram
 - 所有非 GET/HEAD/OPTIONS 请求必须携带与 `SITE_URL` 完全一致的 `Origin`；本地 `development` 例外仅允许 localhost/127.0.0.1。
 - 在线 WebSocket 握手虽为 GET，仍必须携带与 `SITE_URL` 完全一致的 `Origin`；外站不能借用连接抬高人数。
 - JSON API 统一返回 `{ "data": ... }`；错误统一为 `{ "error": { "code", "message" } }`。
-- API 响应默认 `no-store`；静态响应设置 CSP、HSTS、frame、MIME、referrer 和 permissions 安全头。
+- API 响应默认 `no-store`；Workers Assets 通过 `_headers` 设置 CSP、HSTS、frame、MIME、referrer 和 permissions 安全头。主页面 CSP 与 OCR vendor Worker CSP 分离，后者只为锁定运行时额外开放所需权限。
 - 完整认证、安全与限流规则见 [SECURITY.md](SECURITY.md)。
 
 ## 4. 前端路由
@@ -139,6 +140,8 @@ erDiagram
 - `correction_requests`：公众更正、隐私、授权、补充和撤回请求。
 - `audit_events`：采访记录关键写操作的操作者、理由与目标。
 - `public_request_limits`：公众更正接口的一小时计数桶。
+
+生产 D1 已应用 `0001_initial.sql` 与 `0002_simplify_interview_messages.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除 `conversation_units`、`topics`、`record_topics`；这些旧表不是当前模型的一部分。Cloudflare 内部表不属于应用 schema。
 
 数据库定义只来自顺序迁移。已在生产应用的迁移不得修改；新增 schema 必须增加新的编号文件。
 
@@ -218,7 +221,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 - 当前是单一生产环境，没有独立 staging Worker 或 staging D1。
 - 当前没有 MFA、验证码、人机挑战或外部告警系统。
 - 当前只有全站在线人数；没有匹配意愿、随机匹配、双盲采访房间或实时消息持久化。单一全局房间适合当前规模，接近单对象连接容量前必须改为分片房间与聚合计数。
-- OCR 首次使用需要下载约 11MB 本站 Worker、约 6.3MB 模型和约 25MB WASM；弱网或低内存设备可能较慢。当前不提供服务端 OCR 后备，以避免上传私密截图和扩展现有单 Worker 基础设施。
+- OCR 首次使用按需下载 11,341,486 字节的本站 Worker、合计 6,318,080 字节的两个模型、约 16KB ONNX Runtime 子模块和 4,732,028 字节 WASM；上游压缩或缓存行为可能改变传输耗时。弱网或低内存设备可能较慢。当前不提供服务端 OCR 后备，以避免上传私密截图和扩展现有单 Worker 基础设施。
 - 馆长角色由 `SUPERADMIN_EMAILS` 在注册时决定；修改该 Secret 不会自动改变已存在账户角色。
 - 过期会话、邮件动作和限流桶没有定时任务；按[运维手册](OPERATIONS.md)执行周期清理。
 - D1 Time Travel 是短期恢复手段，不是长期独立归档。

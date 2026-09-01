@@ -16,7 +16,16 @@
 
 ## 技术结构
 
-React 19、Tailwind CSS 4 与 Vite 构成响应式前端；PaddleOCR.js 在浏览器专用 Worker 中识别聊天截图，截图不上传服务器；Cloudflare Worker 提供同源 API、静态资源和 SMTP 客户端；Cloudflare Durable Object 通过休眠 WebSocket 协调实时在线状态；Cloudflare D1 保存账户、采访记录、版本、所有权、认领和审计数据。唯一可验证的生产发布链路是 `main` → GitHub Actions → Wrangler → Cloudflare Worker。
+当前仓库只有 `apps/web` 一个 npm workspace 和一个生产部署单元：
+
+- React 19.2.8、React Router 7.18.3、Tailwind CSS 4.3.3、Vite 8.2.2 与 TypeScript 7.0.2 构成响应式 SPA。
+- Cloudflare Workers Assets 提供前端静态文件；同一 `project-been-here` Worker 提供 `/api/*`、D1 访问与 SMTP 客户端。
+- SQLite-backed `PresenceRoom` Durable Object 通过 WebSocket Hibernation 维护全站实时在线人数。
+- D1 `beenhere-records` 保存账户、精简采访草稿、不可变公开版本、双角色消息、所有权、认领、更正和审计。
+- PaddleOCR.js 0.4.2 在浏览器专用 Worker 中识别截图；PP-OCRv6 tiny 模型来自 Paddle BCE，ONNX Runtime 1.24.3 模块与 WASM 来自 jsDelivr，截图字节不会发送到这些服务。
+- 事务邮件由 Worker 通过 `cloudflare:sockets` 连接 Yeah SMTP TLS 465；字体样式来自 Google Fonts，均受 CSP 固定来源限制。
+
+没有第二个 OCR Worker 项目、R2/KV 业务存储、独立 staging、Cron、Turnstile/WAF 仓库配置或服务端 OCR。唯一权威生产发布链路是 `main` → GitHub Actions → Wrangler → 现有 Cloudflare Worker。
 
 ## 文档入口
 

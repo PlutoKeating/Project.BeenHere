@@ -31,8 +31,8 @@ OcrImportPanel ── src/lib/ocr.ts ── browser Web Worker ── PaddleOCR.
 | `src/App.tsx` | 唯一路由表；区分公共、认证和受保护页面。 |
 | `src/components/AppShell.tsx` | 顶部导航、移动底部 Tab、主题与账户入口。 |
 | `src/components/RequireAccount.tsx` | 调用 `/api/account/me`；401 时跳转登录并保留返回路径。 |
-| `src/components/RecordForm.tsx` | 当前手工录入适配器；未来录入方式在该边界扩展。 |
-| `src/components/OcrImportPanel.tsx` | 截图选择、粘贴、拖放、预览、识别进度、取消和错误恢复。 |
+| `src/components/RecordForm.tsx` | 所有录入方式汇合到统一 `RecordDraft`；承接 OCR/纯文本导入、角色校对和最少公开信息。 |
+| `src/components/OcrImportPanel.tsx` | 页面级图片粘贴、选择、拖放、预览、去重、识别进度、取消、资源释放和错误恢复。 |
 | `src/lib/ocr.ts` | 图片类型、数量、体积与解码像素限制，官方 OCR Worker 协议、模型初始化和逐图识别。 |
 | `src/lib/ocr-conversation.ts` | 坐标到角色的纯函数模块；合并多行、过滤居中提示、跨图去重和 100 条上限。 |
 | `src/lib/api.ts` | 唯一 HTTP 客户端；统一 JSON、同源凭据与错误转换。 |
@@ -58,6 +58,8 @@ OcrImportPanel ── src/lib/ocr.ts ── browser Web Worker ── PaddleOCR.
 
 `migrations/*.sql` 是 D1 schema 的唯一来源。当前 binding 名为 `DB`，数据库名为 `beenhere-records`。`record_drafts.snapshot` 与 `published_editions.snapshot` 保存完整 `RecordDraft` JSON；公开版本不可变，当前版本通过 `interview_records.current_edition_id` 指向。
 
+生产已应用 `0001_initial.sql` 与 `0002_simplify_interview_messages.sql`。当前正文表只有 `interview_messages`；`conversation_units`、`topics`、`record_topics` 已由 0002 删除，不得继续作为当前接口或扩展点。
+
 实时状态不进入 D1。`PRESENCE` binding 始终指向一个名为 `global` 的 SQLite-backed `PresenceRoom`；WebSocket attachment 只保存随机 visitor UUID，以便 Durable Object 休眠后恢复去重计数。
 
 ## 扩展规则
@@ -66,6 +68,7 @@ OcrImportPanel ── src/lib/ocr.ts ── browser Web Worker ── PaddleOCR.
 - 新写操作进入 `RecordManagementModule`，必须先检查记录主人或馆长权限并写审计事件。
 - 新录入方式转换为同一个 `RecordDraft`，不新增兼容版采访记录定义。
 - OCR 坐标、置信度、截图文件和预览 URL 都是浏览器临时状态；提交前必须剥离，只保留 `speakerRole` 与 `body`。
+- `public/_headers` 是普通 Assets 响应头的事实源；OCR vendor 路径先 detach 全局 CSP，再应用只允许固定运行时来源的专用 CSP。修改 OCR 资源地址时必须同步源码、`_headers`、安全文档和生产烟测。
 - 新认证动作复用 `account_actions` 的一次性令牌机制，不把令牌明文入库。
 - 新 HTTP 路径同时更新 `worker/index.ts`、`src/lib/api.ts`、根部 `docs/API.md` 和测试。
 - 新实时消息类型集中在 `worker/presence.ts` 与 `src/lib/presence.ts` 的窄接口内；账户身份、匹配和采访消息不得把 visitor UUID 当作授权凭据。

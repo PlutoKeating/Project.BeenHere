@@ -14,11 +14,36 @@
 | SMTP | TLS 465 | 非敏感端点在 `vars`，凭据在 Worker Secrets |
 | 可观测性 | Workers Logs 开启，采样率 100% | `wrangler.jsonc:observability` |
 
-`workers_dev=false`、`preview_urls=false`，生产服务只通过唯一 custom domain 暴露。D1 的实际 UUID 只维护在 `wrangler.jsonc`，文档不重复，避免漂移。
+`workers_dev=false`、`preview_urls=false`，生产服务只通过唯一 custom domain 暴露。Worker compatibility date 为 `2026-08-25`，启用 `global_fetch_strictly_public`，上传 source maps。D1 的实际 UUID 只维护在 `wrangler.jsonc`，文档不重复，避免漂移。
+
+### 已核验生产快照（2026-09-01）
+
+- Cloudflare deployments 显示当前发布来源为 Wrangler，100% 流量指向最新版本；GitHub Actions 的 `verify` 与 `deploy` 是权威流水线。
+- D1 已应用 `0001_initial.sql` 和 `0002_simplify_interview_messages.sql`，无待应用迁移；正式正文表为 `interview_messages`，旧 `conversation_units/topics/record_topics` 已不存在。
+- Worker Secrets 名称为 `SESSION_SECRET`、`SMTP_USERNAME`、`SMTP_PASSWORD`、`SUPERADMIN_EMAILS`；只核验名称，不在仓库记录值。
+- 线上 `/`、`/api/health`、`/vendor/paddleocr-worker-0.4.2.js` 均已验证；OCR vendor 文件为 11,341,486 字节并使用 immutable cache。
+
+此快照记录核验范围，不固定易变的 deployment/version ID。实时版本应通过 `wrangler deployments list` 与目标 GitHub run 的 `headSha` 查询。
 
 生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。Cloudflare Vite Plugin 会生成重定向后的部署配置，且必须保留 `PRESENCE` binding 与 `PresenceRoom` export；Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
 
-`prebuild` 还会从精确锁定的 npm 依赖复制约 11MB 的官方 PaddleOCR 浏览器 Worker 到 `public/vendor/paddleocr-worker-0.4.2.js`。`deploy` 必须调用完整的 `npm run build`，不能绕过该生命周期。生成目录被 Git 忽略，CI 会从 `package-lock.json` 重建；这只是现有 Worker 的静态资产，不是新的 Cloudflare Worker 项目。PP-OCRv6 tiny 模型与 ONNX WASM 不进入部署包，浏览器按需从固定的 BCE BOS 与 jsDelivr 地址下载。
+`prebuild` 还会从精确锁定的 npm 依赖复制 11,341,486 字节的官方 PaddleOCR 浏览器 Worker 到 `public/vendor/paddleocr-worker-0.4.2.js`。`deploy` 必须调用完整的 `npm run build`，不能绕过该生命周期。生成目录被 Git 忽略，CI 会从 `package-lock.json` 重建；这只是现有 Worker 的静态资产，不是新的 Cloudflare Worker 项目。两个 PP-OCRv6 tiny 模型（合计 6,318,080 字节）与 ONNX Runtime Web 1.24.3 子模块/WASM（生产核验分别约 16KB/4,732,028 字节）不进入部署包，浏览器按需从固定的 BCE BOS 与 jsDelivr 地址下载。
+
+### 外部运行时服务与不存在的资源
+
+| 服务/来源 | 当前用途 | 数据边界 |
+|---|---|---|
+| Cloudflare Custom Domain / TLS | 唯一生产入口 | 处理常规连接元数据。 |
+| Workers Assets | SPA、source map、OCR vendor Worker | 与 API 同一部署，不是第二个 Worker。 |
+| D1 `beenhere-records` | 业务持久化与限流桶 | 浏览器不能直连。 |
+| SQLite-backed `PresenceRoom` | 全局 WebSocket 在线人数 | attachment 只含 visitor UUID，不写 D1。 |
+| Workers Logs / D1 Time Travel | 运行日志与短期恢复 | CI 发布前保存 7 天 bookmark artifact。 |
+| Yeah SMTP TLS 465 | 账户事务邮件 | 接收必要邮箱、正文与一次性链接。 |
+| Paddle BCE | PP-OCRv6 tiny 模型下载 | 只收到静态 GET 与常规网络元数据，不收到截图。 |
+| jsDelivr | ONNX Runtime 1.24.3 `.mjs` 与 WASM | 只收到静态 GET 与常规网络元数据，不收到截图。 |
+| Google Fonts | Inter、JetBrains Mono、Noto Serif SC | 只用于字体 CSS/文件，由页面 CSP 限定。 |
+
+当前没有 R2、业务 KV、Queue、Cron、Vectorize、Workers AI、服务端 OCR、第二个 Worker、独立 staging、Cloudflare Access 或仓库管理的 WAF/Turnstile。D1 内部维护的系统表不等于应用使用 KV。
 
 ## 2. 配置源优先级
 
@@ -115,6 +140,8 @@ flowchart LR
 4. `wrangler deploy`。
 5. 对生产 `/api/health` 重试验证。
 
+部署使用 `wrangler-action@v4` 且显式固定 Wrangler 4.127.1；前端/Worker 依赖的当前解析版本以 `package-lock.json` 为准。Actions 使用 Node.js 24，仓库最低支持 Node.js 22.13。
+
 Wrangler 部署时按 `exports` 声明创建或维护 Durable Object namespace；它与 D1 migration 是两套独立生命周期。新增、重命名或删除 Durable Object class 必须审查生产 binding 和 Worker 回滚兼容性。
 
 同一 ref 使用 concurrency 组，新提交会取消旧的在途运行。
@@ -195,5 +222,6 @@ curl --fail https://beenhere.arr2018.dpdns.org/api/health
 - 涉及 schema 时核对迁移列表和关键只读计数。
 - 涉及在线状态时，建立两个 WebSocket 并分别发送不同 visitor UUID 的 hello 帧，验证第一个收到 1、两个连接都收到 2，并确认恶意 Origin 握手返回 403。
 - 涉及 OCR 时，确认 `/vendor/paddleocr-worker-0.4.2.js` 为 200 且带长期缓存；使用受控聊天截图完成一次浏览器识别，确认 CSP 仅放行固定模型/WASM 域名，Network 中没有截图上传请求，最后检查导入草稿 JSON 不含坐标、置信度或图片信息。
+- 涉及 OCR/CSP 时，额外确认页面响应只有严格页面 CSP，vendor 响应只有 detach 后的专用 CSP；vendor 的 `script-src` 仅额外允许 jsDelivr 与运行时所需 eval，`connect-src` 仅允许 jsDelivr 和 Paddle BCE。重复 CSP 会取交集并可能在模型加载前阻断 OCR。
 
 回滚与恢复步骤见 [OPERATIONS.md](OPERATIONS.md)。

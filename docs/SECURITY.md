@@ -5,8 +5,9 @@
 ## 1. 信任边界
 
 - 浏览器、公开社交平台内容和所有 HTTP 输入均不可信。
-- Cloudflare Worker 是认证、授权、输入验证和响应头的唯一执行边界。
+- Cloudflare Worker 是 API 认证、授权和输入验证的唯一执行边界；API/回退头由 Worker 设置，普通静态头由同一部署内的 Workers Assets `_headers` 设置。
 - `PresenceRoom` Durable Object 是实时连接协调边界，只接收 Worker 转发的同源 WebSocket，不作为账户认证源。
+- 同源 OCR Web Worker 是浏览器内的临时计算边界；它接收 ImageBitmap，不能读取 HttpOnly 会话 Cookie，当前代码不调用本站 API，也不具备 D1 binding 或截图上传接口。Paddle BCE、jsDelivr 与 Google Fonts 是受 CSP 固定来源限制的外部静态资源服务。
 - D1 只接受 Worker/运维凭据访问；浏览器没有 D1 binding。
 - SMTP 是外部依赖，只接收最小的收件地址、邮件正文和验证链接。
 - GitHub Actions 与 Cloudflare 管理凭据是生产控制面，权限高于站内馆长。
@@ -83,6 +84,8 @@
 
 JSON API 额外使用 `Cache-Control: no-store`。
 
+Workers Assets 的 `_headers` 规则会合并所有匹配项，同名 CSP 同时存在时浏览器会取交集。`/vendor/*` 因此必须先用 `! Content-Security-Policy` 移除全局策略，再附加专用策略；自动测试与生产验收都要防止回退为两条 CSP。
+
 ## 9. 频率限制
 
 | 动作 | 当前窗口与上限 | Key 构成 |
@@ -116,9 +119,18 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 - 原始来源材料不应放进公开字段；当前系统尚未实现私有附件存储。
 - OCR 原始截图只存在于用户选择的浏览器 File、临时 Object URL 与浏览器 OCR Worker 内存中；不上传 Worker API、不写入 D1/R2/日志，也不作为来源证据。模型与 WASM 供应方会看到静态资源请求的常规网络元数据，但不会收到截图字节。
 - OCR 结果的坐标和置信度只用于当前校对界面；提交 `RecordDraft` 时显式重建消息对象，只保留 `speakerRole` 与 `body`。
+- OCR 输入限制为 1–5 张 PNG/JPEG/WebP，单图最多 15 MB、解码后最多 4000 万像素；限制用于降低浏览器内存/解码风险，不代表图片内容安全或识别结果可信。
 - 在线 visitor UUID 只保存在浏览器 localStorage 与活动 WebSocket attachment，不进入 URL，不写入 D1 或应用日志，也不主动关联 IP、路径或账户；Cloudflare 仍会按其平台规则处理连接元数据。对外只广播聚合人数。
 
-## 12. 已知边界与后续门禁
+## 12. 依赖与供应链边界
+
+- npm 安装使用根 `package-lock.json` 与 `npm ci`；PaddleOCR 依赖额外在构建脚本中校验必须精确为 0.4.2。
+- OCR vendor Worker 从锁定 npm 包复制，不手工修改、不提交生成文件；生产 Assets 使用内容 ETag 与 immutable cache。
+- ONNX Runtime URL 固定为 1.24.3；Paddle 模型路径固定到 PaddleX 3.0.0 的 PP-OCRv6 tiny 资源。更新任一地址或版本必须同步 CSP、文档、资源大小、真实浏览器烟测与隐私说明。
+- 页面不允许外部 JavaScript 或 `unsafe-eval`；只有 OCR vendor Worker 响应获得 jsDelivr 脚本和内置 OpenCV 所需的动态求值权限。
+- 当前没有 Subresource Integrity、资源镜像或离线模型后备。固定上游被篡改、撤回或不可用仍是可用性/供应链风险；不能以扩大 CSP 或默认上传截图作为临时绕过。
+
+## 13. 已知边界与后续门禁
 
 当前未实现：
 
@@ -132,7 +144,7 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 
 这些不是当前已承诺功能。引入任一项时必须更新威胁模型、数据模型、运维手册和验证矩阵。
 
-## 13. 安全事件
+## 14. 安全事件
 
 怀疑凭据泄露时：
 

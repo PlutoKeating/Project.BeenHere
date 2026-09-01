@@ -31,10 +31,13 @@ curl --fail --show-error \
 curl --fail --head \
   https://beenhere.arr2018.dpdns.org/
 
+curl --fail --head \
+  https://beenhere.arr2018.dpdns.org/vendor/paddleocr-worker-0.4.2.js
+
 gh run list --workflow "CI and deploy" --branch main --limit 3
 ```
 
-预期：health 为 200 和 `{"status":"ok","service":"project-been-here"}`；首页为 200；最新生产 run 的 verify/deploy 均成功。
+预期：health 为 200 和 `{"status":"ok","service":"project-been-here"}`；首页与 OCR vendor 为 200；vendor 为 11,341,486 字节并带 immutable cache；最新生产 run 的 verify/deploy 均成功。首页和 vendor 应各只有一条不同 CSP，不能把两条策略叠加到 vendor。
 
 健康接口只验证 Worker 基本路由，不覆盖 SMTP、D1 写入、登录或邮件链接。相关发布必须执行对应业务烟测。
 
@@ -115,11 +118,12 @@ SMTP Password 失效时先在邮箱提供商生成新授权凭据，再交互执
 
 ### 截图 OCR 无法加载或识别
 
-1. 确认 `/vendor/paddleocr-worker-0.4.2.js` 返回 200，且生产 build 中该文件约 11MB、单文件低于 Cloudflare Assets 限制。
-2. 在浏览器 Network 检查 PP-OCRv6 tiny 的两个 `.tar` 和 jsDelivr `ort-wasm-simd-threaded.jsep.wasm`；CSP 错误应同时出现在控制台。
-3. 确认页面 CSP 包含同源 `worker-src`、`wasm-unsafe-eval`，并只在 `connect-src` 放行文档记录的两个域名。不要为临时排障改成通配 `https:`。
+1. 确认 `/vendor/paddleocr-worker-0.4.2.js` 返回 200、11,341,486 字节且带 immutable cache；Cloudflare Workers Assets 单文件上限当前为 25 MiB。
+2. 在浏览器 Network 检查 PP-OCRv6 tiny 的两个 `.tar`（1,792,000 与 4,526,080 字节）、jsDelivr `ort-wasm-simd-threaded.jsep.mjs` 和 `ort-wasm-simd-threaded.jsep.wasm`（生产核验约 4,732,028 字节）；CSP 错误应同时出现在控制台或 Worker request failure。
+3. 首页 CSP 应包含同源 `worker-src`、`wasm-unsafe-eval`、Google Fonts 固定 style/font 来源，但不允许 `unsafe-eval` 或外部脚本。vendor 路径必须用 `! Content-Security-Policy` 脱离全局规则，只对锁定 Worker 允许 `unsafe-eval`、jsDelivr script/connect 与 Paddle BCE connect。不要为临时排障改成通配 `https:` 或给主页面添加 `unsafe-eval`。
 4. 用受控、无真实个人信息的截图复现。不得要求用户上传私密原图到 issue、日志或公共对象存储。
-5. OCR 失败不影响 D1 与现有采访记录；指导用户展开纯文本录入。若固定上游资源长期不可用，再通过代码评审更换固定版本或自托管资产，不新建第二个生产 Worker 绕过。
+5. 若 vendor 已加载但没有模型请求，优先检查 vendor CSP 的 eval 权限；若模型成功而 jsDelivr `.mjs` 失败，检查 vendor `script-src`；若 `.mjs` 成功而 WASM 失败，检查 `connect-src`、CORS 与上游状态。
+6. OCR 失败不影响 D1 与现有采访记录；指导用户展开纯文本录入。若固定上游资源长期不可用，再通过代码评审更换固定版本或自托管资产，不新建第二个生产 Worker 绕过。
 
 ### CI 失败
 
@@ -128,6 +132,8 @@ SMTP Password 失效时先在邮箱提供商生成新授权凭据，再交互执
 - migration 失败：保存错误与 bookmark，判断是否部分应用；D1 migration 记录是事实源。
 - deploy 失败：确认 Worker 名、D1 ID、custom domain 和 GitHub Cloudflare 凭据。
 - health 失败：部署可能已生效但不健康；查看 deployment 与日志后决定 Worker rollback。
+
+当前 Actions 使用 Node.js 24、`wrangler-action@v4` 与 Wrangler 4.127.1。排查依赖差异时先比较 `package-lock.json` 和 `npm ls --depth=0 --workspace @beenhere/web`，不要只看 `package.json` 的范围声明。
 
 ## 7. 账户运维
 
@@ -193,6 +199,8 @@ curl --fail https://beenhere.arr2018.dpdns.org/api/health
 Worker rollback立即把 100% 流量切到指定版本，但不会回滚 D1、Secrets 或外部 SMTP。若目标版本依赖旧 schema/binding，不能单独回滚代码。官方限制见 [Workers Rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)。
 
 `PresenceRoom` 不保存业务数据；回滚到引入在线功能之前的 Worker 可以停止该功能而不恢复 D1。Durable Object namespace 可能继续存在但没有旧版本 binding，不应为清理资源而执行生产删除。
+
+OCR vendor、前端 Assets 与 Worker API 属同一次 deployment。回滚 Worker version 会一并回滚当时的静态资源和 `_headers`；回滚后必须同时验证首页 CSP、vendor CSP 与 OCR 真实识别，不能只看 `/api/health`。
 
 回滚后必须补一个正常 Git 提交修复 main；不要让生产版本长期偏离仓库。
 

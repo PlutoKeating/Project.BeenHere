@@ -5,7 +5,7 @@
 
 ## 决策
 
-系统采用 React + Cloudflare Worker + D1 的模块化单体。站内邮箱账户、HttpOnly 会话与 D1 账户负责身份验证，`record_owners` 负责记录授权。成员直接维护自己的采访记录；认领获批后成为共同主人；馆长具有全局权限。不设置内容复核角色。
+系统采用 React + Cloudflare Worker + D1 的模块化单体。站内邮箱账户、HttpOnly 会话与 D1 账户负责身份验证，`record_owners` 负责记录授权。成员直接维护自己的采访记录；认领获批后成为共同主人；馆长具有全局权限。不设置内容复核角色。后续新增的 Durable Object 在线基座与浏览器 OCR 仍随同一个 Worker/Assets 部署，不改变单部署单元结论。
 
 录入是独立页面和模块，来源由 `source_type` 描述，不与抖音或单一表单耦合。公开时生成不可变版本，修改通过修订号防止覆盖，删除采用软删除并写审计事件。
 
@@ -18,3 +18,4 @@
 - 约束：新录入方式必须转换为同一个 `RecordDraft`；新数据结构使用顺序迁移；生产发布以 GitHub Actions 和仓库配置为事实源。
 
 详细现状见 [技术架构](../ARCHITECTURE.md)、[部署架构](../DEPLOYMENT.md)与[安全模型](../SECURITY.md)。
+后续扩展决策见 [实时在线基座](0003-realtime-presence-foundation.md)与[浏览器 OCR](0004-browser-ocr-ingestion.md)。

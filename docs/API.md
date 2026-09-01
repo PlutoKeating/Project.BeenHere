@@ -48,7 +48,7 @@
 | `GET /api/v1/records?limit=24` | 公开记录列表；limit 被限制在 1–50。 |
 | `GET /api/v1/records/{recordNumber}` | 按 `BH-000001` 读取 public/unlisted 记录与当前版本。 |
 | `GET /api/v1/drift?exclude=BH-000001` | 随机返回一条公开记录；最多使用 20 个有效排除编号。 |
-| `GET /api/v1/search?q=...` | 搜索编号、标题、摘要、显示名与公开版本快照；最多 50 条。 |
+| `GET /api/v1/search?q=...` | 搜索编号、标题、摘要、显示名与公开版本快照；查询截取前 100 字符，最多 50 条。 |
 | `GET /api/v1/people/{slug}` | 被采访者资料与公开记录。 |
 | `GET /api/v1/years/{year}` | 指定四位年份的公开记录。 |
 | `POST /api/v1/correction-requests` | 提交更正、隐私、授权、补充或撤回请求。 |
@@ -65,7 +65,7 @@
 }
 ```
 
-`recordNumber` 可省略；`requesterRole` 为 `participant|reader|representative|other`，`kind` 为 `fact|identity|privacy|consent|supplement|withdrawal`。同一来源每小时最多 5 次。
+`recordNumber` 可省略；`requesterContact` 为 3–200 字符，`description` 为 10–4000 字符；`requesterRole` 为 `participant|reader|representative|other`，`kind` 为 `fact|identity|privacy|consent|supplement|withdrawal`。同一来源每小时最多 5 次。
 
 ## 5. 认证 `/api/auth`
 
@@ -112,6 +112,8 @@
 | `GET /api/account/claims` | 返回收到与发出的认领申请。 |
 | `POST /api/account/claims/{id}/review` | `decision=approved|rejected` 与可选 `note`。 |
 
+删除理由为 3–500 字符；公开变更说明为 2–500 字符；认领审阅说明最多 1000 字符。创建认领申请与更正申请成功返回 201；创建采访记录成功也返回 201。
+
 `draft` 的规范结构定义在 `worker/index.ts` 与 `worker/types.ts`：
 
 ```json
@@ -126,7 +128,9 @@
 }
 ```
 
-消息只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。标题、摘要和人物 slug 由 Worker 派生。录入来源只使用 `douyin|social_media|in_person|direct|other`。
+消息数组限制为 2–100 条，单条正文去除首尾空白后为 1–8000 字符，只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。被采访者显示名为 1–80 字符，平台名最多 80 字符，`conductedAt` 必须是带时区偏移的 ISO datetime，`canonicalUrl` 只接受 HTTP(S) URL。标题、摘要和人物 slug 由 Worker 派生。录入来源只使用 `douyin|social_media|in_person|direct|other`。
+
+浏览器 OCR 的 5 张、15 MB、4000 万像素限制是前端临时输入约束，不是 API 字段。服务端从不接收截图，也不信任前端置信度或坐标；无论消息来自 OCR、纯文本还是未来实时采访，都必须通过同一个 `draftSchema`。
 
 ## 8. 馆长 `/api/director`
 
