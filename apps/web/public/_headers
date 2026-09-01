@@ -6,3 +6,6 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable

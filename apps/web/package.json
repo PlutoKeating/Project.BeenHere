@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "prepare:ocr": "node scripts/prepare-ocr-worker.mjs",
+    "predev": "npm run prepare:ocr",
     "dev": "vite",
+    "prebuild": "npm run prepare:ocr",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
@@ -16,6 +19,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote"
   },
   "dependencies": {
+    "@paddleocr/paddleocr-js": "0.4.2",
     "lucide-react": "^1.38.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

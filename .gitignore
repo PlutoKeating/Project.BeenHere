@@ -7,6 +7,7 @@ node_modules/
 out/
 dist/
 build/
+apps/web/public/vendor/
 .turbo/
 .cache/
 coverage/
