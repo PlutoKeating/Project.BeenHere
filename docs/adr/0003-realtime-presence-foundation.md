@@ -9,7 +9,7 @@
 
 ## 决策
 
-新增一个 SQLite-backed `PresenceRoom` Durable Object。浏览器为当前浏览器生成并在 localStorage 保存随机 UUID，通过同源 `/api/presence` WebSocket 连接名为 `global` 的对象。对象使用 WebSocket Hibernation API，把 UUID 放在连接 attachment 中，按不同 UUID 计数并向全部连接广播 `{ "type": "presence", "online": number }`。
+新增一个 SQLite-backed `PresenceRoom` Durable Object。浏览器为当前浏览器生成并在 localStorage 保存随机 UUID，通过同源 `/api/presence` WebSocket 连接名为 `global` 的对象，再以首条 `hello` 消息发送 UUID。对象校验后把 UUID 放在连接 attachment 中，使用 WebSocket Hibernation API 按不同 UUID 计数，并向全部连接广播 `{ "type": "presence", "online": number }`。
 
 界面只在人数不少于 2 时展示。断线后立即移除旧值并退避重连。同一浏览器多个标签页使用同一 UUID，因此只计为一位。
 
@@ -22,8 +22,8 @@
 
 ## 安全与隐私
 
-- WebSocket GET 握手额外校验精确 Origin；visitor 参数必须是 UUID。
-- visitor UUID 不是账户 ID、Cookie 或权限凭据，不写入 D1，不用于跨浏览器识别。
+- WebSocket GET 握手额外校验精确 Origin；首条 hello 的 visitorId 必须是 UUID，重复或无效身份帧以 1008 关闭。
+- visitor UUID 不是账户 ID、Cookie 或权限凭据，不进入 URL、D1 或应用日志，不用于跨浏览器识别。
 - 广播只包含聚合人数，不包含在线名单、IP、路径或账户资料。
 
 ## 后果与边界

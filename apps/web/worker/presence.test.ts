@@ -21,7 +21,7 @@ function presenceEnv() {
 describe("presence WebSocket route", () => {
   it("routes a same-origin visitor to the single global room", async () => {
     const { env, fetch, get, idFromName } = presenceEnv();
-    const request = new Request(`${siteUrl}/api/presence?visitor=${visitorId}`, {
+    const request = new Request(`${siteUrl}/api/presence`, {
       headers: { origin: siteUrl, upgrade: "websocket" },
     });
 
@@ -36,7 +36,7 @@ describe("presence WebSocket route", () => {
 
   it("rejects a WebSocket opened by another website", async () => {
     const { env, fetch } = presenceEnv();
-    const request = new Request(`${siteUrl}/api/presence?visitor=${visitorId}`, {
+    const request = new Request(`${siteUrl}/api/presence`, {
       headers: { origin: "https://evil.example", upgrade: "websocket" },
     });
 
@@ -49,7 +49,7 @@ describe("presence WebSocket route", () => {
 
   it("requires a WebSocket upgrade", async () => {
     const { env, fetch } = presenceEnv();
-    const response = await worker.fetch(new Request(`${siteUrl}/api/presence?visitor=${visitorId}`, {
+    const response = await worker.fetch(new Request(`${siteUrl}/api/presence`, {
       headers: { origin: siteUrl },
     }), env);
 
@@ -58,20 +58,9 @@ describe("presence WebSocket route", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects a malformed visitor identifier", async () => {
-    const { env, fetch } = presenceEnv();
-    const response = await worker.fetch(new Request(`${siteUrl}/api/presence?visitor=shared-name`, {
-      headers: { origin: siteUrl, upgrade: "websocket" },
-    }), env);
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: { code: "invalid_visitor", message: "在线访客标识无效。" } });
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
   it("accepts only the WebSocket GET handshake method", async () => {
     const { env, fetch } = presenceEnv();
-    const response = await worker.fetch(new Request(`${siteUrl}/api/presence?visitor=${visitorId}`, {
+    const response = await worker.fetch(new Request(`${siteUrl}/api/presence`, {
       method: "POST",
       headers: { origin: siteUrl, upgrade: "websocket" },
     }), env);
@@ -105,15 +94,29 @@ describe("online visitor count", () => {
   });
 
   it("broadcasts the current distinct count to every live connection", () => {
-    const sockets = ["visitor-a", "visitor-a", "visitor-b"].map((visitorId) => ({
-      deserializeAttachment: () => ({ visitorId }),
+    const attachments: Array<string | null> = [null, visitorId, "visitor-b"];
+    const sockets = attachments.map((attached, index) => ({
+      deserializeAttachment: () => ({ visitorId: attached }),
+      serializeAttachment: vi.fn((value: { visitorId: string }) => { attachments[index] = value.visitorId; }),
       send: vi.fn(),
+      close: vi.fn(),
     })) as unknown as WebSocket[];
     const state = { getWebSockets: () => sockets } as unknown as DurableObjectState;
     const room = new PresenceRoom(state);
 
-    room.webSocketMessage(sockets[0]!, "sync");
+    room.webSocketMessage(sockets[0]!, JSON.stringify({ type: "hello", visitorId }));
 
+    expect(sockets[0]!.serializeAttachment).toHaveBeenCalledWith({ visitorId });
     for (const socket of sockets) expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "presence", online: 2 }));
+  });
+
+  it("closes a connection that sends an invalid hello message", () => {
+    const socket = { close: vi.fn() } as unknown as WebSocket;
+    const state = { getWebSockets: () => [socket] } as unknown as DurableObjectState;
+    const room = new PresenceRoom(state);
+
+    room.webSocketMessage(socket, '{"type":"hello","visitorId":"shared-name"}');
+
+    expect(socket.close).toHaveBeenCalledWith(1008, "在线访客标识无效。");
   });
 });

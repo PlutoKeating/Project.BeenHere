@@ -20,21 +20,31 @@ export function presenceUpdate(sockets: WebSocket[]): { type: "presence"; online
 export class PresenceRoom {
   constructor(private readonly state: DurableObjectState) {}
 
-  async fetch(request: Request): Promise<Response> {
-    const visitorId = new URL(request.url).searchParams.get("visitor") ?? "";
-    if (!visitorIdPattern.test(visitorId)) throw new HttpError(400, "invalid_visitor", "在线访客标识无效。");
-
+  async fetch(_request: Request): Promise<Response> {
     const pair = new WebSocketPair();
     const client = pair[0];
     const server = pair[1];
-    server.serializeAttachment({ visitorId });
+    server.serializeAttachment({ visitorId: null });
     this.state.acceptWebSocket(server);
-    this.broadcast();
     return new Response(null, { status: 101, webSocket: client });
   }
 
   webSocketMessage(_socket: WebSocket, message: string | ArrayBuffer): void {
-    if (message === "sync") this.broadcast();
+    let hello: unknown;
+    try {
+      hello = typeof message === "string" ? JSON.parse(message) : null;
+    } catch {
+      hello = null;
+    }
+    const visitorId = hello && typeof hello === "object" && "type" in hello && hello.type === "hello" && "visitorId" in hello
+      ? hello.visitorId
+      : null;
+    if (typeof visitorId !== "string" || !visitorIdPattern.test(visitorId) || attachedVisitorId(_socket) !== null) {
+      _socket.close(1008, "在线访客标识无效。");
+      return;
+    }
+    _socket.serializeAttachment({ visitorId });
+    this.broadcast();
   }
 
   webSocketClose(socket: WebSocket, code: number, reason: string): void {
@@ -70,10 +80,6 @@ export async function connectPresence(request: Request, env: Env): Promise<Respo
       { error: { code: "websocket_upgrade_required", message: "此路径需要 WebSocket 连接。" } },
       { status: 426, headers: { upgrade: "websocket" } },
     );
-  }
-  const visitorId = new URL(request.url).searchParams.get("visitor") ?? "";
-  if (!visitorIdPattern.test(visitorId)) {
-    throw new HttpError(400, "invalid_visitor", "在线访客标识无效。");
   }
   const roomId = env.PRESENCE.idFromName("global");
   return env.PRESENCE.get(roomId).fetch(request);

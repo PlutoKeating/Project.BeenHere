@@ -164,6 +164,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 ```text
 页面打开 → 本地取得/生成随机 visitor UUID → 同源 WebSocket 连接全局 PresenceRoom
+  → 连接打开后发送一次受校验的 hello 身份帧（URL 不携带 visitor UUID）
   → Durable Object 按 visitor UUID 去重并广播人数
   → online >= 2 时 AppShell 顶部展示
   → 断线立即隐藏旧值并退避重连；连接关闭后重新广播

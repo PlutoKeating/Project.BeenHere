@@ -14,10 +14,12 @@ describe("presence updates", () => {
   it("opens one same-origin socket with a stable browser visitor id", () => {
     const listeners = new Map<string, (event: { data?: string }) => void>();
     const close = vi.fn();
+    const send = vi.fn();
     const urls: string[] = [];
     class FakeWebSocket {
       constructor(url: string) { urls.push(url); }
       addEventListener(type: string, listener: (event: { data?: string }) => void) { listeners.set(type, listener); }
+      send(value: string) { send(value); }
       close(code?: number, reason?: string) { close(code, reason); }
     }
     const setItem = vi.fn();
@@ -34,10 +36,12 @@ describe("presence updates", () => {
     const receive = vi.fn();
 
     const stop = watchOnlineCount(receive);
+    listeners.get("open")?.({});
     listeners.get("message")?.({ data: '{"type":"presence","online":3}' });
 
-    expect(urls).toEqual(["wss://beenhere.arr2018.dpdns.org/api/presence?visitor=018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa"]);
+    expect(urls).toEqual(["wss://beenhere.arr2018.dpdns.org/api/presence"]);
     expect(setItem).toHaveBeenCalledWith("bh_presence_visitor", "018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa");
+    expect(send).toHaveBeenCalledWith('{"type":"hello","visitorId":"018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa"}');
     expect(receive).toHaveBeenCalledWith(3);
 
     stop();

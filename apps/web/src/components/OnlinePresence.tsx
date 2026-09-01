@@ -4,7 +4,7 @@ import { watchOnlineCount } from "../lib/presence";
 export function PresenceIndicator({ online }: { online: number | null }) {
   if (online === null || online < 2) return null;
   return <span
-    className="inline-flex items-center gap-2 whitespace-nowrap px-2 font-mono text-[10px] text-ink-muted"
+    className="inline-flex items-center gap-2 whitespace-nowrap px-2 font-mono text-xs text-ink-muted"
     role="status"
     aria-live="polite"
     aria-label={`当前 ${online} 人在线`}

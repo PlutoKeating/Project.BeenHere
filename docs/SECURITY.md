@@ -63,7 +63,7 @@
 ## 7. CSRF、输入与输出
 
 - 所有状态修改请求要求 `Origin === SITE_URL`；本地 development 只额外允许 localhost/127.0.0.1。
-- `/api/presence` 虽使用 GET 握手，仍强制 `Origin === SITE_URL`、WebSocket Upgrade 与 UUID visitor 参数，防止第三方网页借用连接操纵人数。
+- `/api/presence` 虽使用 GET 握手，仍强制 `Origin === SITE_URL` 与 WebSocket Upgrade；连接后的第一条 hello 消息必须携带 UUID visitor，防止第三方网页借用连接操纵人数。
 - SameSite=Lax Cookie 与严格 Origin 共同降低 CSRF 风险。
 - 所有 JSON 正文先检查 Content-Type，再由 Zod 校验长度、枚举、URL、时间与结构。
 - SQL 全部使用 D1 prepared statement `.bind()`，不拼接用户正文；唯一动态 placeholder 数量来自已验证的漂流排除列表。
@@ -114,7 +114,7 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 - 公开版本不可变；修改产生新版本与内容摘要，避免静默覆盖历史。
 - 采访记录软删除保留版本与审计；账户删除保留匿名引用。
 - 原始来源材料不应放进公开字段；当前系统尚未实现私有附件存储。
-- 在线 visitor UUID 只保存在浏览器 localStorage 与活动 WebSocket attachment，不写入 D1，不关联 IP、路径或账户；对外只广播聚合人数。
+- 在线 visitor UUID 只保存在浏览器 localStorage 与活动 WebSocket attachment，不进入 URL，不写入 D1 或应用日志，也不主动关联 IP、路径或账户；Cloudflare 仍会按其平台规则处理连接元数据。对外只广播聚合人数。
 
 ## 12. 已知边界与后续门禁
 

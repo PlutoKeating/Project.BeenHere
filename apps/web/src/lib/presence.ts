@@ -29,10 +29,9 @@ function browserVisitorId(): string {
   return visitorId;
 }
 
-function presenceUrl(visitorId: string): string {
+function presenceUrl(): string {
   const url = new URL("/api/presence", window.location.href);
   url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  url.searchParams.set("visitor", visitorId);
   return url.toString();
 }
 
@@ -45,9 +44,12 @@ export function watchOnlineCount(onCount: (online: number | null) => void): () =
 
   const connect = () => {
     if (stopped || socket) return;
-    const current = new window.WebSocket(presenceUrl(visitorId));
+    const current = new window.WebSocket(presenceUrl());
     socket = current;
-    current.addEventListener("open", () => { attempt = 0; });
+    current.addEventListener("open", () => {
+      attempt = 0;
+      current.send(JSON.stringify({ type: "hello", visitorId }));
+    });
     current.addEventListener("message", (event) => {
       if (typeof event.data !== "string") return;
       const online = parsePresenceUpdate(event.data);

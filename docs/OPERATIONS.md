@@ -109,7 +109,7 @@ SMTP Password 失效时先在邮箱提供商生成新授权凭据，再交互执
 ### 在线人数不显示或不下降
 
 1. 先确认是否确有至少两个不同浏览器 visitor UUID；单人和同浏览器多标签页不显示属于预期。
-2. 在浏览器检查 `/api/presence` 是否为 101；400 查 visitor UUID，403 查 Origin/SITE_URL，426 查 Upgrade 是否被代理剥离。
+2. 在浏览器检查 `/api/presence` 是否为 101；WebSocket 1008 查 hello 中的 visitor UUID，403 查 Origin/SITE_URL，426 查 Upgrade 是否被代理剥离。
 3. 查看最新 Worker deployment 是否包含 `PRESENCE` binding 和 `PresenceRoom` export，再查看 Durable Object invocation/error 指标。
 4. 人数短暂不下降通常是网络断开尚未完成；客户端断线会先隐藏旧值，服务端在 WebSocket close/error 后广播新值。持续异常时记录连接时间与 deployment，禁止通过 D1 DELETE 处理，因为在线状态不在 D1。
 

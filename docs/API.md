@@ -24,9 +24,15 @@
 
 | 方法与路径 | 说明 | 认证 |
 |---|---|---|
-| `GET /api/presence?visitor={uuid}` | 升级为同源 WebSocket，订阅全站在线人数。 | 无 |
+| `GET /api/presence` | 升级为同源 WebSocket，订阅全站在线人数。 | 无 |
 
-握手必须包含 `Upgrade: websocket`、精确等于 `SITE_URL` 的 `Origin` 和浏览器生成的 UUID。普通 HTTP 请求返回 426；外站 Origin 返回 403；无效 UUID 返回 400。连接成功后服务端广播：
+握手必须包含 `Upgrade: websocket` 和精确等于 `SITE_URL` 的 `Origin`。普通 HTTP 请求返回 426；外站 Origin 返回 403。连接打开后，客户端必须先发送浏览器生成的 UUID；无效或重复 hello 会以 WebSocket code 1008 关闭连接：
+
+```json
+{ "type": "hello", "visitorId": "018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa" }
+```
+
+身份帧通过后服务端广播：
 
 ```json
 { "type": "presence", "online": 2 }

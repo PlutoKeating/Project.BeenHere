@@ -190,6 +190,6 @@ curl --fail https://beenhere.arr2018.dpdns.org/api/health
 - 恶意 Origin 的写请求返回 403。
 - 涉及账户邮件时，用受控测试账户验证 SMTP 接受、收件和一次性链接；验收后清理测试数据。
 - 涉及 schema 时核对迁移列表和关键只读计数。
-- 涉及在线状态时，用两个不同 visitor UUID 建立 WebSocket，验证第一个收到 1、两个连接都收到 2，并确认恶意 Origin 握手返回 403。
+- 涉及在线状态时，建立两个 WebSocket 并分别发送不同 visitor UUID 的 hello 帧，验证第一个收到 1、两个连接都收到 2，并确认恶意 Origin 握手返回 403。
 
 回滚与恢复步骤见 [OPERATIONS.md](OPERATIONS.md)。
