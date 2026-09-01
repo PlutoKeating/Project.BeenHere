@@ -27,7 +27,7 @@ describe("session and CSRF boundary", () => {
 
     expect(staticHeaders).toContain(`Content-Security-Policy: ${policy}`);
     expect(staticHeaders).toContain("! Content-Security-Policy");
-    expect(staticHeaders).toContain("script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'");
+    expect(staticHeaders).toContain("script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net");
     expect(staticHeaders).toContain("https://fonts.googleapis.com");
     expect(staticHeaders).toContain("https://fonts.gstatic.com");
   });
