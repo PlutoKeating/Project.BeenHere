@@ -1,33 +1,69 @@
-# 启动与部署
+# 本地启动
 
-## 本地
+本页只描述本地开发。生产发布见[部署架构](DEPLOYMENT.md)，线上故障与恢复见[运维手册](OPERATIONS.md)。
 
-需要 Node.js 22+。安装后运行：
+## 1. 环境要求
+
+- Node.js 22.13 或更高版本；CI 当前使用 Node.js 24。
+- npm，依赖版本由根目录 `package-lock.json` 锁定。
+- 需要执行 Cloudflare 远程命令时，先完成 `npx wrangler login`。
+
+## 2. 安装与初始化
 
 ```bash
-npm install
+npm ci
+cp apps/web/.dev.vars.example apps/web/.dev.vars
+npm run db:migrate:local
 npm run dev
+```
+
+开发服务器由 Vite 与 Cloudflare Vite Plugin 共同启动；React 页面、Worker API 和本地 D1 使用同一套源码。
+
+`apps/web/.dev.vars` 已被 Git 忽略。只使用 `.dev.vars`，不要同时创建 `.env`。至少替换 `SESSION_SECRET`；需要测试注册、密码重设、换邮箱或删号邮件时，再填写可用的测试 SMTP 凭据。禁止把生产授权码复制进仓库或测试日志。
+
+## 3. 本地变量
+
+| 名称 | 本地用途 |
+|---|---|
+| `APP_ENV` | 设为 `development`，允许 localhost 的同源写请求。 |
+| `SITE_URL` | 本地邮件链接和 Origin 校验基址，默认 `http://localhost:5173`。 |
+| `SESSION_SECRET` | 会话令牌 HMAC 密钥；使用独立随机值。 |
+| `SMTP_HOST` / `SMTP_PORT` | 测试 SMTP TLS 端点。 |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | 测试邮箱凭据。 |
+| `SMTP_FROM_NAME` | 发件人显示名。 |
+| `SUPERADMIN_EMAILS` | 本地首次注册时授予馆长角色的邮箱列表。 |
+
+`DB` 与 `ASSETS` 由 Wrangler/Vite binding 提供，不写入 `.dev.vars`。
+
+## 4. 验证
+
+```bash
+npm run typecheck
+npm test
+npm run build
+# 或一次执行全部门禁
 npm run check
 ```
 
-初始化本地 D1：
+测试覆盖密码派生、令牌摘要、Cookie/Origin 边界、SMTP 邮件格式、领域编号、移动导航和异步注册成功状态。`npm run check` 不发送真实邮件，也不证明生产部署成功。
+
+## 5. 本地 D1
 
 ```bash
+# 应用尚未执行的迁移
 npm run db:migrate:local
+
+# 查看本地表
+cd apps/web
+npx wrangler d1 execute beenhere-records --local \
+  --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
 ```
 
-首次开发先复制 `apps/web/.dev.vars.example` 为 `apps/web/.dev.vars`；该本地文件已被 Git 忽略。
+新增数据库变化时创建递增迁移，例如 `0002_description.sql`。不要修改已经在生产执行过的迁移；CI 只会执行尚未记录的文件。
 
-## 生产
+## 6. 常见本地问题
 
-- Worker：`project-been-here`
-- D1：`beenhere-records`
-- 唯一域名：`beenhere.arr2018.dpdns.org`
-- Worker secrets：`SESSION_SECRET`、`SMTP_USERNAME`、`SMTP_PASSWORD`、`SUPERADMIN_EMAILS`
-- Worker vars：`SMTP_HOST=smtp.yeah.net`、`SMTP_PORT=465`、`SMTP_FROM_NAME=来过`
-- GitHub secret：`CLOUDFLARE_API_TOKEN`
-- GitHub variable：`CLOUDFLARE_ACCOUNT_ID`
-
-站内账户保护 `/studio*`、`/director*`、`/api/account/*` 和 `/api/director/*`。邮箱完成验证后才能登录；Worker 根据注册邮箱是否属于 `SUPERADMIN_EMAILS` 授予馆长角色。
-
-主分支推送触发 GitHub Actions：检查根目录文档布局、安装锁定依赖、类型检查、测试、构建、保存 D1 恢复书签、迁移、部署和健康检查。Cloudflare Worker 的 Git 连接也会收到同一提交并触发平台构建。
+- 注册返回 500：通常是 `.dev.vars` 中 SMTP 配置不可用；先看终端 Worker 日志。
+- 写请求返回 403：确认 `APP_ENV=development`，并从 localhost 页面发起请求。
+- 数据表不存在：重新运行 `npm run db:migrate:local`。
+- 类型与页面行为不一致：先运行 `npm run check`，再检查 `src/lib/api.ts` 与 `worker/index.ts` 是否同步。

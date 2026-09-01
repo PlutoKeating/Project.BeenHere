@@ -15,10 +15,20 @@
 
 ## 技术结构
 
-React 19、Tailwind CSS 4 与 Vite 构成响应式前端；Cloudflare Worker 提供同源 API 与静态资源；Cloudflare D1 保存账户、采访记录、版本、所有权、认领和审计数据。详见 [架构](docs/ARCHITECTURE.md)、[领域语言](docs/CONTEXT.md)、[设计系统](docs/DESIGN_SYSTEM.md) 与 [启动部署](docs/QUICK_START.md)。
+React 19、Tailwind CSS 4 与 Vite 构成响应式前端；Cloudflare Worker 提供同源 API、静态资源和 SMTP 客户端；Cloudflare D1 保存账户、采访记录、版本、所有权、认领和审计数据。唯一可验证的生产发布链路是 `main` → GitHub Actions → Wrangler → Cloudflare Worker。
+
+## 文档入口
+
+- [技术架构](docs/ARCHITECTURE.md)：运行时拓扑、模块边界、数据模型和关键流程。
+- [HTTP API](docs/API.md)：接口、权限、请求与响应约定。
+- [部署架构](docs/DEPLOYMENT.md)：环境、Secrets、CI/CD、标准发布与验收。
+- [运维手册](docs/OPERATIONS.md)：监控、故障处理、回滚、D1 恢复与密钥轮换。
+- [安全模型](docs/SECURITY.md)：认证、授权、令牌、限流和已知边界。
+- [本地启动](docs/QUICK_START.md)：开发环境、D1 初始化和验证命令。
+- [领域语言](docs/CONTEXT.md)、[内容规范](docs/content.md)、[设计原则](docs/DESIGN_SOUL.md)、[设计系统](docs/DESIGN_SYSTEM.md)。
 
 ```bash
-npm install
+npm ci
 npm run dev
 npm run check
 ```

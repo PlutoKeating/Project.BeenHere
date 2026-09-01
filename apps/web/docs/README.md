@@ -1,5 +1,23 @@
 # Web 应用
 
-同一 Cloudflare Worker 承载 React/Tailwind 响应式界面、同源 API 与 D1 访问。移动端优先，同时适配平板与桌面。
+`apps/web` 是当前唯一可部署应用。同一 Cloudflare Worker 承载 React/Tailwind 响应式界面、同源 API、D1 访问与 SMTP 客户端。移动端优先，同时适配平板与桌面。
 
-常用命令：`npm run dev`、`npm run typecheck`、`npm test`、`npm run build`。完整架构和接口以仓库 `docs/ARCHITECTURE.md` 为准。
+## 目录
+
+- `src/`：浏览器端 React 应用。
+- `worker/`：Worker 入口、业务模块、安全边界与 SMTP。
+- `migrations/`：D1 的顺序迁移文件；已经发布的迁移不得改写。
+- `public/`：静态响应头等公开资源。
+- `wrangler.jsonc`：生产 Worker、域名、Assets、D1 binding 与非敏感变量的配置源。
+
+## 常用命令
+
+```bash
+npm run dev
+npm run typecheck
+npm test
+npm run build
+npm run db:migrate:local
+```
+
+完整信息以仓库根部的[技术架构](../../../docs/ARCHITECTURE.md)、[API](../../../docs/API.md)、[部署](../../../docs/DEPLOYMENT.md)和[运维手册](../../../docs/OPERATIONS.md)为准。

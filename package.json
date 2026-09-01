@@ -17,6 +17,6 @@
     "db:migrate:remote": "npm run db:migrate:remote --workspace @beenhere/web"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13.0"
   }
 }
