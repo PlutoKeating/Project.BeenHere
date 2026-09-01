@@ -125,6 +125,7 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 ## 12. 依赖与供应链边界
 
 - npm 安装使用根 `package-lock.json` 与 `npm ci`；PaddleOCR 依赖额外在构建脚本中校验必须精确为 0.4.2。
+- 生产 Vite 构建当前发布客户端 source map，Wrangler 上传 Worker source map；它们用于诊断但不得包含 Secret、`.dev.vars` 或用户数据。关闭或改为私有化时必须同步部署与运维说明。
 - OCR vendor Worker 从锁定 npm 包复制，不手工修改、不提交生成文件；生产 Assets 使用内容 ETag 与 immutable cache。
 - ONNX Runtime URL 固定为 1.24.3；Paddle 模型路径固定到 PaddleX 3.0.0 的 PP-OCRv6 tiny 资源。更新任一地址或版本必须同步 CSP、文档、资源大小、真实浏览器烟测与隐私说明。
 - 页面不允许外部 JavaScript 或 `unsafe-eval`；只有 OCR vendor Worker 响应获得 jsDelivr 脚本和内置 OpenCV 所需的动态求值权限。

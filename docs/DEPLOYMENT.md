@@ -25,7 +25,7 @@
 
 此快照记录核验范围，不固定易变的 deployment/version ID。实时版本应通过 `wrangler deployments list` 与目标 GitHub run 的 `headSha` 查询。
 
-生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。Cloudflare Vite Plugin 会生成重定向后的部署配置，且必须保留 `PRESENCE` binding 与 `PresenceRoom` export；Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
+生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。`vite.config.ts` 当前为客户端和 Worker 构建启用 source map，`wrangler.jsonc` 同时开启 Worker source map 上传；客户端 `.js.map` 属 Workers Assets。Cloudflare Vite Plugin 会生成重定向后的部署配置，且必须保留 `PRESENCE` binding 与 `PresenceRoom` export；Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
 
 `prebuild` 还会从精确锁定的 npm 依赖复制 11,341,486 字节的官方 PaddleOCR 浏览器 Worker 到 `public/vendor/paddleocr-worker-0.4.2.js`。`deploy` 必须调用完整的 `npm run build`，不能绕过该生命周期。生成目录被 Git 忽略，CI 会从 `package-lock.json` 重建；这只是现有 Worker 的静态资产，不是新的 Cloudflare Worker 项目。两个 PP-OCRv6 tiny 模型（合计 6,318,080 字节）与 ONNX Runtime Web 1.24.3 子模块/WASM（生产核验分别约 16KB/4,732,028 字节）不进入部署包，浏览器按需从固定的 BCE BOS 与 jsDelivr 地址下载。
 
