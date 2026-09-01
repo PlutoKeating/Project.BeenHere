@@ -2,6 +2,7 @@ import { BookOpenText, Compass, Home, Menu, Search, UserRound, X } from "lucide-
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
+import { OnlinePresence } from "./OnlinePresence";
 
 const navigation = [
   { to: "/drift", label: "漂流", icon: Compass },
@@ -44,6 +45,7 @@ export function AppShell() {
         <NavLink to="/" className="group flex items-center gap-3" aria-label="来过首页"><span className="font-serif text-xl font-semibold">来过</span><span className="record-label text-[9px] text-ink-muted">BEEN HERE</span></NavLink>
         <DesktopNav />
         <div className="flex items-center gap-1">
+          <OnlinePresence/>
           <AccountLink className="hidden min-h-11 items-center gap-2 px-3 text-sm text-ink-muted hover:text-ink sm:flex"><UserRound size={16}/>我的记录</AccountLink>
           <ThemeToggle/>
           <button className="grid size-11 place-items-center tablet:hidden" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="打开导航">{open ? <X/> : <Menu/>}</button>

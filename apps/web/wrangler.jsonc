@@ -26,6 +26,20 @@
       "migrations_dir": "migrations"
     }
   ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PRESENCE",
+        "class_name": "PresenceRoom"
+      }
+    ]
+  },
+  "exports": {
+    "PresenceRoom": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
   "vars": {
     "APP_ENV": "production",
     "SITE_URL": "https://beenhere.arr2018.dpdns.org",

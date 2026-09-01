@@ -4,6 +4,7 @@ export type AccountRole = "member" | "director";
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  PRESENCE: DurableObjectNamespace;
   APP_ENV: string;
   SITE_URL: string;
   SUPERADMIN_EMAILS?: string;

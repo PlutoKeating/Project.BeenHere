@@ -15,6 +15,8 @@ src/lib/api.ts ── same-origin HTTP ── worker/index.ts
              ├── auth-crypto.ts            └──────────┬───────────────┘
              ├── smtp.ts                              ▼
              └────────────────────────────────────── D1
+
+src/lib/presence.ts ── WebSocket ── worker/presence.ts ── PresenceRoom
 ```
 
 浏览器端不导入 Worker 模块、不读取 D1 字段，也不接触 SMTP 或会话密钥。业务授权必须在 Worker 内再次判断，不能依赖前端隐藏按钮。
@@ -28,6 +30,7 @@ src/lib/api.ts ── same-origin HTTP ── worker/index.ts
 | `src/components/RequireAccount.tsx` | 调用 `/api/account/me`；401 时跳转登录并保留返回路径。 |
 | `src/components/RecordForm.tsx` | 当前手工录入适配器；未来录入方式在该边界扩展。 |
 | `src/lib/api.ts` | 唯一 HTTP 客户端；统一 JSON、同源凭据与错误转换。 |
+| `src/lib/presence.ts` | 实时连接适配器；本地访客标识、消息校验、断线清值和退避重连。 |
 | `src/styles/tokens.css` | primitive → semantic → component 三层 Token。 |
 
 ## Worker 端
@@ -43,10 +46,13 @@ src/lib/api.ts ── same-origin HTTP ── worker/index.ts
 | `worker/record-management.ts` | 所有权、修订、公开版本、软删除、认领和审计。 |
 | `worker/governance.ts` | 公开更正/撤回请求和小时级限流。 |
 | `worker/domain.ts` | 无基础设施依赖的领域格式与规范化函数。 |
+| `worker/presence.ts` | 同源 WebSocket 入口与全局 Durable Object；访客去重和人数广播。 |
 
 ## 持久化
 
 `migrations/*.sql` 是 D1 schema 的唯一来源。当前 binding 名为 `DB`，数据库名为 `beenhere-records`。`record_drafts.snapshot` 与 `published_editions.snapshot` 保存完整 `RecordDraft` JSON；公开版本不可变，当前版本通过 `interview_records.current_edition_id` 指向。
+
+实时状态不进入 D1。`PRESENCE` binding 始终指向一个名为 `global` 的 SQLite-backed `PresenceRoom`；WebSocket attachment 只保存随机 visitor UUID，以便 Durable Object 休眠后恢复去重计数。
 
 ## 扩展规则
 
@@ -55,3 +61,4 @@ src/lib/api.ts ── same-origin HTTP ── worker/index.ts
 - 新录入方式转换为同一个 `RecordDraft`，不新增兼容版采访记录定义。
 - 新认证动作复用 `account_actions` 的一次性令牌机制，不把令牌明文入库。
 - 新 HTTP 路径同时更新 `worker/index.ts`、`src/lib/api.ts`、根部 `docs/API.md` 和测试。
+- 新实时消息类型集中在 `worker/presence.ts` 与 `src/lib/presence.ts` 的窄接口内；账户身份、匹配和采访消息不得把 visitor UUID 当作授权凭据。

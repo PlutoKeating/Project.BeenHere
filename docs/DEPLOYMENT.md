@@ -9,12 +9,13 @@
 | 入口 | `apps/web/worker/index.ts` | `wrangler.jsonc:main` |
 | 静态资源 | Vite 产物 `apps/web/dist/client` → binding `ASSETS` | `wrangler.jsonc:assets` + Cloudflare Vite Plugin |
 | D1 | `beenhere-records` → binding `DB` | `wrangler.jsonc:d1_databases` |
+| Durable Object | SQLite-backed `PresenceRoom` → binding `PRESENCE` | `wrangler.jsonc:durable_objects` + `exports` |
 | SMTP | TLS 465 | 非敏感端点在 `vars`，凭据在 Worker Secrets |
 | 可观测性 | Workers Logs 开启，采样率 100% | `wrangler.jsonc:observability` |
 
 `workers_dev=false`、`preview_urls=false`，生产服务只通过唯一 custom domain 暴露。D1 的实际 UUID 只维护在 `wrangler.jsonc`，文档不重复，避免漂移。
 
-生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。Cloudflare Vite Plugin 会生成重定向后的部署配置，Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
+生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。Cloudflare Vite Plugin 会生成重定向后的部署配置，且必须保留 `PRESENCE` binding 与 `PresenceRoom` export；Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
 
 ## 2. 配置源优先级
 
@@ -111,6 +112,8 @@ flowchart LR
 4. `wrangler deploy`。
 5. 对生产 `/api/health` 重试验证。
 
+Wrangler 部署时按 `exports` 声明创建或维护 Durable Object namespace；它与 D1 migration 是两套独立生命周期。新增、重命名或删除 Durable Object class 必须审查生产 binding 和 Worker 回滚兼容性。
+
 同一 ref 使用 concurrency 组，新提交会取消旧的在途运行。
 
 ### Cloudflare Workers Builds 状态
@@ -187,5 +190,6 @@ curl --fail https://beenhere.arr2018.dpdns.org/api/health
 - 恶意 Origin 的写请求返回 403。
 - 涉及账户邮件时，用受控测试账户验证 SMTP 接受、收件和一次性链接；验收后清理测试数据。
 - 涉及 schema 时核对迁移列表和关键只读计数。
+- 涉及在线状态时，用两个不同 visitor UUID 建立 WebSocket，验证第一个收到 1、两个连接都收到 2，并确认恶意 Origin 握手返回 403。
 
 回滚与恢复步骤见 [OPERATIONS.md](OPERATIONS.md)。

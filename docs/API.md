@@ -20,7 +20,21 @@
 
 只证明 Worker 路由可响应；不证明 SMTP、登录邮件或全部 D1 写链路正常。
 
-## 3. 公共读取 `/api/v1`
+## 3. 实时在线
+
+| 方法与路径 | 说明 | 认证 |
+|---|---|---|
+| `GET /api/presence?visitor={uuid}` | 升级为同源 WebSocket，订阅全站在线人数。 | 无 |
+
+握手必须包含 `Upgrade: websocket`、精确等于 `SITE_URL` 的 `Origin` 和浏览器生成的 UUID。普通 HTTP 请求返回 426；外站 Origin 返回 403；无效 UUID 返回 400。连接成功后服务端广播：
+
+```json
+{ "type": "presence", "online": 2 }
+```
+
+人数按不同 visitor UUID 去重。visitor 只用于当前浏览器在线去重，不是账户身份或授权凭据；服务端不公开在线名单。客户端断线时不得继续展示最后一次人数。
+
+## 4. 公共读取 `/api/v1`
 
 | 方法与路径 | 说明 |
 |---|---|
@@ -47,7 +61,7 @@
 
 `recordNumber` 可省略；`requesterRole` 为 `participant|reader|representative|other`，`kind` 为 `fact|identity|privacy|consent|supplement|withdrawal`。同一来源每小时最多 5 次。
 
-## 4. 认证 `/api/auth`
+## 5. 认证 `/api/auth`
 
 | 方法与路径 | 正文 | 成功结果 |
 |---|---|---|
@@ -62,7 +76,7 @@
 
 注册用户名 2–40 字符；邮箱最长 254 字符；新密码 12–128 字符；一次性 token 只接受 40–200 字符。
 
-## 5. 当前账户 `/api/account`
+## 6. 当前账户 `/api/account`
 
 全部要求 active 会话。
 
@@ -74,7 +88,7 @@
 | `PATCH /api/account/email` | `currentPassword`, `newEmail`；向新邮箱发送确认链接。 |
 | `POST /api/account/deletion` | `{}`；向当前邮箱发送删号确认链接。 |
 
-## 6. 采访记录管理
+## 7. 采访记录管理
 
 全部要求 active 会话。普通成员只能管理 `record_owners` 中自己的记录；馆长可管理全部。
 
@@ -106,7 +120,7 @@
 
 消息只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。标题、摘要和人物 slug 由 Worker 派生。录入来源只使用 `douyin|social_media|in_person|direct|other`。
 
-## 7. 馆长 `/api/director`
+## 8. 馆长 `/api/director`
 
 | 方法与路径 | 说明 |
 |---|---|
@@ -115,8 +129,9 @@
 
 暂停成员时立即删除其全部会话。当前没有通过 HTTP 修改角色的接口。
 
-## 8. 接口变更规则
+## 9. 接口变更规则
 
 - 产品尚未维护兼容层；接口变化直接收敛到一个版本。
 - 新增或修改路径时，必须同步 `worker/index.ts`、`src/lib/api.ts`、相关 Zod/type、测试与本文。
+- WebSocket 路径同步维护 `worker/presence.ts`、`src/lib/presence.ts`、消息校验、Origin 测试与本文，不经 `src/lib/api.ts` 的 JSON 请求封装。
 - 禁止仅修改前端类型而不修改 Worker 校验，或直接向客户端暴露 D1 行结构。

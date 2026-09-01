@@ -38,6 +38,8 @@ gh run list --workflow "CI and deploy" --branch main --limit 3
 
 健康接口只验证 Worker 基本路由，不覆盖 SMTP、D1 写入、登录或邮件链接。相关发布必须执行对应业务烟测。
 
+实时在线需要独立 WebSocket 烟测。浏览器开发者工具中 `/api/presence` 应保持 101；两个不同浏览器访客连接后都应收到 `{"type":"presence","online":2}`。同一浏览器多标签页使用相同 visitor UUID，只增加连接数，不增加在线人数。
+
 ## 4. 实时日志
 
 ```bash
@@ -103,6 +105,13 @@ SMTP Password 失效时先在邮箱提供商生成新授权凭据，再交互执
 ### 429 频率限制
 
 认证桶为 15 分钟，更正桶为 1 小时。先确认是正常防护还是滥用；不要直接删限流表来掩盖攻击。误触发可等待窗口结束。持续攻击应在 Cloudflare WAF/Rate Limiting 层增加规则；当前仓库未配置 WAF 规则。
+
+### 在线人数不显示或不下降
+
+1. 先确认是否确有至少两个不同浏览器 visitor UUID；单人和同浏览器多标签页不显示属于预期。
+2. 在浏览器检查 `/api/presence` 是否为 101；400 查 visitor UUID，403 查 Origin/SITE_URL，426 查 Upgrade 是否被代理剥离。
+3. 查看最新 Worker deployment 是否包含 `PRESENCE` binding 和 `PresenceRoom` export，再查看 Durable Object invocation/error 指标。
+4. 人数短暂不下降通常是网络断开尚未完成；客户端断线会先隐藏旧值，服务端在 WebSocket close/error 后广播新值。持续异常时记录连接时间与 deployment，禁止通过 D1 DELETE 处理，因为在线状态不在 D1。
 
 ### CI 失败
 
@@ -174,6 +183,8 @@ curl --fail https://beenhere.arr2018.dpdns.org/api/health
 ```
 
 Worker rollback立即把 100% 流量切到指定版本，但不会回滚 D1、Secrets 或外部 SMTP。若目标版本依赖旧 schema/binding，不能单独回滚代码。官方限制见 [Workers Rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)。
+
+`PresenceRoom` 不保存业务数据；回滚到引入在线功能之前的 Worker 可以停止该功能而不恢复 D1。Durable Object namespace 可能继续存在但没有旧版本 binding，不应为清理资源而执行生产删除。
 
 回滚后必须补一个正常 Git 提交修复 main；不要让生产版本长期偏离仓库。
 

@@ -1,11 +1,11 @@
 # Web 应用
 
-`apps/web` 是当前唯一可部署应用。同一 Cloudflare Worker 承载 React/Tailwind 响应式界面、同源 API、D1 访问与 SMTP 客户端。移动端优先，同时适配平板与桌面。
+`apps/web` 是当前唯一可部署应用。同一 Cloudflare Worker 承载 React/Tailwind 响应式界面、同源 API、Durable Object 在线房间、D1 访问与 SMTP 客户端。移动端优先，同时适配平板与桌面。
 
 ## 目录
 
 - `src/`：浏览器端 React 应用。
-- `worker/`：Worker 入口、业务模块、安全边界与 SMTP。
+- `worker/`：Worker 入口、业务模块、在线房间、安全边界与 SMTP。
 - `migrations/`：D1 的顺序迁移文件；当前采访正文保存为 `interview_messages` 双角色纯文本消息，已经发布的迁移不得改写。
 - `public/`：静态响应头等公开资源。
 - `wrangler.jsonc`：生产 Worker、域名、Assets、D1 binding 与非敏感变量的配置源。

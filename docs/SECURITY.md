@@ -6,6 +6,7 @@
 
 - 浏览器、公开社交平台内容和所有 HTTP 输入均不可信。
 - Cloudflare Worker 是认证、授权、输入验证和响应头的唯一执行边界。
+- `PresenceRoom` Durable Object 是实时连接协调边界，只接收 Worker 转发的同源 WebSocket，不作为账户认证源。
 - D1 只接受 Worker/运维凭据访问；浏览器没有 D1 binding。
 - SMTP 是外部依赖，只接收最小的收件地址、邮件正文和验证链接。
 - GitHub Actions 与 Cloudflare 管理凭据是生产控制面，权限高于站内馆长。
@@ -62,6 +63,7 @@
 ## 7. CSRF、输入与输出
 
 - 所有状态修改请求要求 `Origin === SITE_URL`；本地 development 只额外允许 localhost/127.0.0.1。
+- `/api/presence` 虽使用 GET 握手，仍强制 `Origin === SITE_URL`、WebSocket Upgrade 与 UUID visitor 参数，防止第三方网页借用连接操纵人数。
 - SameSite=Lax Cookie 与严格 Origin 共同降低 CSRF 风险。
 - 所有 JSON 正文先检查 Content-Type，再由 Zod 校验长度、枚举、URL、时间与结构。
 - SQL 全部使用 D1 prepared statement `.bind()`，不拼接用户正文；唯一动态 placeholder 数量来自已验证的漂流排除列表。
@@ -112,6 +114,7 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 - 公开版本不可变；修改产生新版本与内容摘要，避免静默覆盖历史。
 - 采访记录软删除保留版本与审计；账户删除保留匿名引用。
 - 原始来源材料不应放进公开字段；当前系统尚未实现私有附件存储。
+- 在线 visitor UUID 只保存在浏览器 localStorage 与活动 WebSocket attachment，不写入 D1，不关联 IP、路径或账户；对外只广播聚合人数。
 
 ## 12. 已知边界与后续门禁
 
@@ -123,6 +126,7 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 - 外部 SIEM、错误告警或异常登录通知。
 - 自动清理过期技术状态的 Cron。
 - 账户自助会话列表、单设备撤销和登录历史。
+- 在线连接级限流、Turnstile 与恶意多浏览器访客防刷；当前 Origin 与 UUID 校验只阻止跨站滥用，不能证明一个 UUID 对应一个自然人。
 
 这些不是当前已承诺功能。引入任一项时必须更新威胁模型、数据模型、运维手册和验证矩阵。
 

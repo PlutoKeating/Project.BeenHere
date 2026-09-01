@@ -11,12 +11,14 @@ flowchart TD
   Worker[Cloudflare Worker\nproject-been-here]
   Assets[Workers Assets\nReact SPA]
   API[同源 API\n/api/*]
+  Presence[Durable Object\nPresenceRoom]
   D1[(Cloudflare D1\nbeenhere-records)]
   SMTP[Yeah SMTP\nTLS 465]
 
   Browser -->|HTTPS| Domain --> Worker
   Worker -->|非 API 请求| Assets
   Worker -->|API 请求| API
+  API -->|WebSocket /api/presence| Presence
   API --> D1
   API -->|账户事务邮件| SMTP
 ```
@@ -32,6 +34,7 @@ Worker 是唯一应用入口。`/api/*` 必须先经过 Worker；其他路径由
 | API/计算 | Cloudflare Worker 模块化单体 | `apps/web/worker/index.ts` |
 | 验证 | Zod 4 | `worker/index.ts` 的请求 schema |
 | 数据 | Cloudflare D1 / SQLite | `apps/web/migrations/` |
+| 实时协调 | Cloudflare Durable Object / WebSocket Hibernation | `worker/presence.ts`、`wrangler.jsonc` |
 | 邮件 | Worker TCP Socket → SMTP over TLS 465 | `worker/smtp.ts` |
 | 测试 | Vitest、JSDOM | `*.test.ts(x)` |
 | 部署 | GitHub Actions、Wrangler 4.127.1 | `.github/workflows/ci.yml` |
@@ -62,6 +65,7 @@ sequenceDiagram
 ```
 
 - 所有非 GET/HEAD/OPTIONS 请求必须携带与 `SITE_URL` 完全一致的 `Origin`；本地 `development` 例外仅允许 localhost/127.0.0.1。
+- 在线 WebSocket 握手虽为 GET，仍必须携带与 `SITE_URL` 完全一致的 `Origin`；外站不能借用连接抬高人数。
 - JSON API 统一返回 `{ "data": ... }`；错误统一为 `{ "error": { "code", "message" } }`。
 - API 响应默认 `no-store`；静态响应设置 CSP、HSTS、frame、MIME、referrer 和 permissions 安全头。
 - 完整认证、安全与限流规则见 [SECURITY.md](SECURITY.md)。
@@ -85,6 +89,7 @@ sequenceDiagram
 | `AccountModule` | 注册、会话、资料、安全操作、馆长账户管理 | 密码/会话/邮件令牌不以明文入库。 |
 | `RecordManagementModule` | 创建、更新、公开、删除、认领 | 成员必须是记录主人；馆长可管理全部；写操作带审计。 |
 | `GovernanceModule` | 更正与撤回请求 | 公众只能提交请求，不能直接修改采访记录。 |
+| `PresenceRoom` | 连接、按访客去重、人数广播 | 只保留活动 WebSocket 附件；不持久化浏览历史、IP 或采访内容。 |
 
 Web 模块目录约定见 [`apps/web/docs/README.md`](../apps/web/docs/README.md)，HTTP 契约见 [API.md](API.md)。
 
@@ -155,6 +160,17 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 公共列表、搜索与漂流只读取 `public`；详情允许通过稳定编号读取 `public` 与 `unlisted`；`private`、`deleted` 永不公开。
 
+### 实时在线
+
+```text
+页面打开 → 本地取得/生成随机 visitor UUID → 同源 WebSocket 连接全局 PresenceRoom
+  → Durable Object 按 visitor UUID 去重并广播人数
+  → online >= 2 时 AppShell 顶部展示
+  → 断线立即隐藏旧值并退避重连；连接关闭后重新广播
+```
+
+`PresenceRoom` 使用 WebSocket Hibernation；休眠恢复后人数直接从连接附件重建，不依赖 Worker 内存或 D1 心跳。当前 visitor UUID 只是浏览器级去重键，不是认证或授权依据。
+
 ## 8. 权限矩阵
 
 | 能力 | 路人 | 成员 | 记录主人 | 馆长 |
@@ -179,6 +195,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 - 当前是单一生产环境，没有独立 staging Worker 或 staging D1。
 - 当前没有 MFA、验证码、人机挑战或外部告警系统。
+- 当前只有全站在线人数；没有匹配意愿、随机匹配、双盲采访房间或实时消息持久化。单一全局房间适合当前规模，接近单对象连接容量前必须改为分片房间与聚合计数。
 - 馆长角色由 `SUPERADMIN_EMAILS` 在注册时决定；修改该 Secret 不会自动改变已存在账户角色。
 - 过期会话、邮件动作和限流桶没有定时任务；按[运维手册](OPERATIONS.md)执行周期清理。
 - D1 Time Travel 是短期恢复手段，不是长期独立归档。

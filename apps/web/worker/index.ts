@@ -4,6 +4,7 @@ import { GovernanceModule } from "./governance";
 import { clearSessionCookie, errorResponse, HttpError, json, methodNotAllowed, parseBody, requireSameOrigin, secureAssetResponse, setSessionCookie } from "./http";
 import { RecordManagementModule } from "./record-management";
 import { RecordRepository } from "./record-repository";
+import { connectPresence } from "./presence";
 import type { Account, Env, RecordDraft } from "./types";
 
 const webUrl = z.url().refine((value) => value.startsWith("https://") || value.startsWith("http://"), "链接必须使用 http 或 https。");
@@ -218,6 +219,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (request.method === "OPTIONS") return new Response(null, { status: 204 });
   requireSameOrigin(request, env.SITE_URL, env.APP_ENV === "development");
   if (url.pathname === "/api/health") return json({ status: "ok", service: "project-been-here" });
+  if (url.pathname === "/api/presence") return connectPresence(request, env);
   const authResponse = await authApi(request, env, url);
   if (authResponse) return authResponse;
   const publicResponse = await publicApi(request, env, url);
@@ -236,3 +238,4 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 export { handle };
+export { PresenceRoom } from "./presence";

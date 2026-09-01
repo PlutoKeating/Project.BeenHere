@@ -33,7 +33,7 @@ npm run dev
 | `SMTP_FROM_NAME` | 发件人显示名。 |
 | `SUPERADMIN_EMAILS` | 本地首次注册时授予馆长角色的邮箱列表。 |
 
-`DB` 与 `ASSETS` 由 Wrangler/Vite binding 提供，不写入 `.dev.vars`。
+`DB`、`ASSETS` 与 `PRESENCE` 由 Wrangler/Vite binding 提供，不写入 `.dev.vars`。本地 Durable Object 数据在 `.wrangler/` 下生成并已被忽略。
 
 ## 4. 验证
 
@@ -45,7 +45,9 @@ npm run build
 npm run check
 ```
 
-测试覆盖密码派生、令牌摘要、Cookie/Origin 边界、SMTP 邮件格式、领域编号、纯文本对话解析、派生公开文本、移动导航和异步注册成功状态。`npm run check` 不发送真实邮件，也不证明生产部署成功。
+测试覆盖密码派生、令牌摘要、Cookie/Origin 边界、在线访客去重与消息校验、SMTP 邮件格式、领域编号、纯文本对话解析、派生公开文本、移动导航和异步注册成功状态。`npm run check` 不发送真实邮件，也不证明生产部署成功。
+
+本地实时在线验收：同时用两个不同浏览器配置文件打开页面，第二个连接建立后顶部应显示“2 人在线”；同一浏览器打开多个标签页仍只计为一位。关闭其中一个浏览器后，剩余页面应隐藏人数。
 
 ## 5. 本地 D1
 
@@ -67,3 +69,4 @@ npx wrangler d1 execute beenhere-records --local \
 - 写请求返回 403：确认 `APP_ENV=development`，并从 localhost 页面发起请求。
 - 数据表不存在：重新运行 `npm run db:migrate:local`。
 - 类型与页面行为不一致：先运行 `npm run check`，再检查 `src/lib/api.ts` 与 `worker/index.ts` 是否同步。
+- 顶部不显示在线人数：单人在线时属于预期；多人测试时检查浏览器 WebSocket、请求 Origin、本地 `PRESENCE` binding 与控制台连接错误。
