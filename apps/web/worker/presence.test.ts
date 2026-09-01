@@ -94,9 +94,9 @@ describe("online visitor count", () => {
   });
 
   it("broadcasts the current distinct count to every live connection", () => {
-    const attachments: Array<string | null> = [null, visitorId, "visitor-b"];
-    const sockets = attachments.map((attached, index) => ({
-      deserializeAttachment: () => ({ visitorId: attached }),
+    const attachments: Array<string | null> = [null, visitorId, null, "visitor-b"];
+    const sockets = attachments.map((_attached, index) => ({
+      deserializeAttachment: () => ({ visitorId: attachments[index] }),
       serializeAttachment: vi.fn((value: { visitorId: string }) => { attachments[index] = value.visitorId; }),
       send: vi.fn(),
       close: vi.fn(),
@@ -107,7 +107,10 @@ describe("online visitor count", () => {
     room.webSocketMessage(sockets[0]!, JSON.stringify({ type: "hello", visitorId }));
 
     expect(sockets[0]!.serializeAttachment).toHaveBeenCalledWith({ visitorId });
-    for (const socket of sockets) expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: "presence", online: 2 }));
+    expect(sockets[0]!.send).toHaveBeenCalledWith(JSON.stringify({ type: "presence", online: 2 }));
+    expect(sockets[1]!.send).toHaveBeenCalledWith(JSON.stringify({ type: "presence", online: 2 }));
+    expect(sockets[3]!.send).toHaveBeenCalledWith(JSON.stringify({ type: "presence", online: 2 }));
+    expect(sockets[2]!.send).not.toHaveBeenCalled();
   });
 
   it("closes a connection that sends an invalid hello message", () => {

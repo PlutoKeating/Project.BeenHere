@@ -58,7 +58,7 @@ export class PresenceRoom {
   }
 
   private broadcast(excluded?: WebSocket): void {
-    const sockets = this.state.getWebSockets().filter((socket) => socket !== excluded);
+    const sockets = this.state.getWebSockets().filter((socket) => socket !== excluded && attachedVisitorId(socket) !== null);
     const payload = JSON.stringify(presenceUpdate(sockets));
     for (const socket of sockets) {
       try {
