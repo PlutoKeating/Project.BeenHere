@@ -24,13 +24,12 @@
 
 | 方法与路径 | 说明 |
 |---|---|
-| `GET /api/v1/meta` | 公开采访记录、人物、话题、年份计数。 |
+| `GET /api/v1/meta` | 公开采访记录、人物和年份计数。 |
 | `GET /api/v1/records?limit=24` | 公开记录列表；limit 被限制在 1–50。 |
 | `GET /api/v1/records/{recordNumber}` | 按 `BH-000001` 读取 public/unlisted 记录与当前版本。 |
 | `GET /api/v1/drift?exclude=BH-000001` | 随机返回一条公开记录；最多使用 20 个有效排除编号。 |
 | `GET /api/v1/search?q=...` | 搜索编号、标题、摘要、显示名与公开版本快照；最多 50 条。 |
 | `GET /api/v1/people/{slug}` | 被采访者资料与公开记录。 |
-| `GET /api/v1/topics/{slug}` | 话题资料与公开记录。 |
 | `GET /api/v1/years/{year}` | 指定四位年份的公开记录。 |
 | `POST /api/v1/correction-requests` | 提交更正、隐私、授权、补充或撤回请求。 |
 
@@ -46,7 +45,7 @@
 }
 ```
 
-`recordNumber` 可省略；`requesterRole` 为 `participant|reader|representative|other`，`kind` 为 `fact|identity|privacy|consent|supplement|topic|withdrawal`。同一来源每小时最多 5 次。
+`recordNumber` 可省略；`requesterRole` 为 `participant|reader|representative|other`，`kind` 为 `fact|identity|privacy|consent|supplement|withdrawal`。同一来源每小时最多 5 次。
 
 ## 4. 认证 `/api/auth`
 
@@ -91,7 +90,21 @@
 | `GET /api/account/claims` | 返回收到与发出的认领申请。 |
 | `POST /api/account/claims/{id}/review` | `decision=approved|rejected` 与可选 `note`。 |
 
-`draft` 的规范结构定义在 `worker/index.ts` 与 `worker/types.ts`，核心字段包括 participant、record、story、recordNote、units、topics、source。录入来源只使用 `douyin|social_media|in_person|direct|other`。
+`draft` 的规范结构定义在 `worker/index.ts` 与 `worker/types.ts`：
+
+```json
+{
+  "participant": { "displayName": "小林", "identityMode": "pseudonym" },
+  "conductedAt": "2026-09-01T00:00:00.000Z",
+  "messages": [
+    { "speakerRole": "interviewer", "body": "你最近在想什么？" },
+    { "speakerRole": "participant", "body": "想去一个没有去过的地方。" }
+  ],
+  "source": { "sourceType": "douyin", "platformName": "抖音", "canonicalUrl": "https://example.com/source" }
+}
+```
+
+消息只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。标题、摘要和人物 slug 由 Worker 派生。录入来源只使用 `douyin|social_media|in_person|direct|other`。
 
 ## 7. 馆长 `/api/director`
 

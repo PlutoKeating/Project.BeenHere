@@ -70,7 +70,7 @@ sequenceDiagram
 
 | 分组 | 路径 | 访问条件 |
 |---|---|---|
-| 公共 | `/`、`/records`、`/records/:recordNumber`、`/drift`、`/search`、人物/话题/年份、`/method`、`/corrections` | 无需登录 |
+| 公共 | `/`、`/records`、`/records/:recordNumber`、`/drift`、`/search`、人物/年份、`/method`、`/corrections` | 无需登录 |
 | 认证 | `/auth/login`、`/auth/register`、找回密码与四类邮件确认页 | 无需登录 |
 | 成员 | `/studio`、`/studio/new`、记录编辑、认领、`/account/settings` | active 会话 |
 | 馆长 | `/director/accounts` | active 且 role=director |
@@ -86,7 +86,7 @@ sequenceDiagram
 | `RecordManagementModule` | 创建、更新、公开、删除、认领 | 成员必须是记录主人；馆长可管理全部；写操作带审计。 |
 | `GovernanceModule` | 更正与撤回请求 | 公众只能提交请求，不能直接修改采访记录。 |
 
-详细代码边界见 [`apps/web/docs/ARCHITECTURE.md`](../apps/web/docs/ARCHITECTURE.md)，HTTP 契约见 [API.md](API.md)。
+Web 模块目录约定见 [`apps/web/docs/README.md`](../apps/web/docs/README.md)，HTTP 契约见 [API.md](API.md)。
 
 ## 6. 数据模型
 
@@ -102,9 +102,7 @@ erDiagram
   interview_records ||--o{ record_owners : governed_by
   interview_records ||--o{ claim_requests : claimed_by
   interview_records ||--o{ correction_requests : receives
-  published_editions ||--o{ conversation_units : contains
-  interview_records ||--o{ record_topics : tagged
-  topics ||--o{ record_topics : classifies
+  published_editions ||--o{ interview_messages : contains
 ```
 
 ### 账户域
@@ -116,14 +114,13 @@ erDiagram
 
 ### 采访记录域
 
-- `people`：被采访者公开身份，支持实名、化名、匿名。
-- `interview_records`：记录根实体、公开编号、visibility、当前公开版本与软删除信息。
+- `people`：被采访者公开身份，支持实名、化名、匿名；公开路径由系统生成。
+- `interview_records`：记录根实体、公开编号、visibility、当前公开版本、软删除信息，以及从消息派生的标题和摘要。
 - `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。
-- `record_drafts`：当前完整 JSON 草稿和递增 revision，用于乐观并发控制。
+- `record_drafts`：当前精简 JSON 草稿和递增 revision，用于乐观并发控制；草稿只包含 participant、conductedAt、messages 与 source。
 - `published_editions`：不可变 JSON 快照、版本号、变更说明和 SHA-256 内容摘要。
-- `conversation_units`：当前公开版本的有序问题、回答、图片说明、停顿、注记与章节。
+- `interview_messages`：当前公开版本的有序纯文本消息，角色只允许 `interviewer|participant`。
 - `source_records`：抖音、其他社交媒体、线下、直接采访或其他来源。
-- `topics` / `record_topics`：话题及多对多关系。
 
 ### 治理域
 
@@ -150,7 +147,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 ```text
 创建草稿(private, revision=1)
-  → 编辑（expectedRevision 乐观锁）
+  → 粘贴/校对双角色消息并编辑（expectedRevision 乐观锁）
   → 公开（分配 BH-000001 编号，生成 immutable edition）
   → 再编辑 / 再公开（新 edition，不覆盖旧版本）
   → 软删除(deleted，停止公开，保留历史与审计)

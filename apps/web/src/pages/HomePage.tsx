@@ -42,11 +42,10 @@ export function HomePage() {
       </section>
 
       <section className="border-y border-line bg-subtle/55 py-10" aria-label="采访记录网站规模">
-        <div className="page-shell grid grid-cols-2 gap-y-8 tablet:grid-cols-4">
+        <div className="page-shell grid grid-cols-1 gap-y-8 sm:grid-cols-3">
           {[
             [meta?.records ?? "—", "RECORDS", "份采访记录"],
             [meta?.people ?? "—", "PEOPLE", "个普通人"],
-            [meta?.topics ?? "—", "TOPICS", "个话题"],
             [meta?.years ?? "—", "YEARS", "年的痕迹"],
           ].map(([value, label, description]) => (
             <div key={label} className="border-l border-line pl-4 tablet:pl-6">

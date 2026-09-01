@@ -45,7 +45,7 @@ npm run build
 npm run check
 ```
 
-测试覆盖密码派生、令牌摘要、Cookie/Origin 边界、SMTP 邮件格式、领域编号、移动导航和异步注册成功状态。`npm run check` 不发送真实邮件，也不证明生产部署成功。
+测试覆盖密码派生、令牌摘要、Cookie/Origin 边界、SMTP 邮件格式、领域编号、纯文本对话解析、派生公开文本、移动导航和异步注册成功状态。`npm run check` 不发送真实邮件，也不证明生产部署成功。
 
 ## 5. 本地 D1
 

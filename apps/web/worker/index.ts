@@ -6,38 +6,24 @@ import { RecordManagementModule } from "./record-management";
 import { RecordRepository } from "./record-repository";
 import type { Account, Env, RecordDraft } from "./types";
 
-const slug = z.string().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const webUrl = z.url().refine((value) => value.startsWith("https://") || value.startsWith("http://"), "链接必须使用 http 或 https。");
-const draftSchema: z.ZodType<RecordDraft> = z.object({
+export const draftSchema: z.ZodType<RecordDraft> = z.object({
   participant: z.object({
-    slug,
     displayName: z.string().trim().min(1).max(80),
     identityMode: z.enum(["real_name", "pseudonym", "anonymous"]),
-    bio: z.string().trim().max(500),
   }),
-  record: z.object({
-    title: z.string().trim().min(1).max(120),
-    excerpt: z.string().trim().min(1).max(300),
-    conductedAt: z.iso.datetime({ offset: true }),
-    endedAt: z.iso.datetime({ offset: true }).optional(),
-  }),
-  story: z.array(z.string().trim().min(1).max(4000)).min(1).max(100),
-  recordNote: z.string().trim().min(1).max(1000),
-  units: z.array(z.object({
+  conductedAt: z.iso.datetime({ offset: true }),
+  messages: z.array(z.object({
     id: z.string().optional(),
-    sequence: z.number().int().positive(),
-    kind: z.enum(["question", "answer", "image", "pause", "note", "section"]),
-    speakerRole: z.enum(["interviewer", "participant", "recorder", "system"]),
-    body: z.string().max(8000),
-    occurredAt: z.iso.datetime({ offset: true }).nullable(),
-    durationSeconds: z.number().int().nonnegative().nullable(),
-    parentUnitId: z.string().nullable(),
-  })).min(1).max(500),
-  topics: z.array(z.object({ slug, name: z.string().trim().min(1).max(40) })).max(12),
+    speakerRole: z.enum(["interviewer", "participant"]),
+    body: z.string().trim().min(1).max(8000),
+  })).min(2).max(100).superRefine((messages, context) => {
+    if (!messages.some((message) => message.speakerRole === "interviewer")) context.addIssue({ code: "custom", message: "至少需要一条采访者消息。" });
+    if (!messages.some((message) => message.speakerRole === "participant")) context.addIssue({ code: "custom", message: "至少需要一条被采访者消息。" });
+  }),
   source: z.object({
     sourceType: z.enum(["douyin", "social_media", "in_person", "direct", "other"]),
     platformName: z.string().trim().max(80).optional(),
-    externalId: z.string().max(120).optional(),
     canonicalUrl: webUrl.optional(),
   }),
 });
@@ -45,7 +31,7 @@ const correctionSchema = z.object({
   recordNumber: z.string().regex(/^BH-\d{6}$/).optional(),
   requesterContact: z.string().trim().min(3).max(200),
   requesterRole: z.enum(["participant", "reader", "representative", "other"]),
-  kind: z.enum(["fact", "identity", "privacy", "consent", "supplement", "topic", "withdrawal"]),
+  kind: z.enum(["fact", "identity", "privacy", "consent", "supplement", "withdrawal"]),
   description: z.string().trim().min(10).max(4000),
 });
 const emailSchema = z.email().max(254).transform((value) => value.trim().toLowerCase());
@@ -125,10 +111,6 @@ async function publicApi(request: Request, env: Env, url: URL): Promise<Response
   if (url.pathname.startsWith("/api/v1/people/")) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);
     return json({ data: await repository.byPerson(segment(url.pathname, "/api/v1/people/") ?? "") });
-  }
-  if (url.pathname.startsWith("/api/v1/topics/")) {
-    if (request.method !== "GET") return methodNotAllowed(["GET"]);
-    return json({ data: await repository.byTopic(segment(url.pathname, "/api/v1/topics/") ?? "") });
   }
   if (url.pathname.startsWith("/api/v1/years/")) {
     if (request.method !== "GET") return methodNotAllowed(["GET"]);

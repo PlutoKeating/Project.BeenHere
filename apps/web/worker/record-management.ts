@@ -1,4 +1,4 @@
-import { formatRecordNumber } from "./domain";
+import { deriveRecordPresentation, formatRecordNumber } from "./domain";
 import { HttpError } from "./http";
 import type { Account, RecordDraft } from "./types";
 
@@ -27,19 +27,20 @@ export class RecordManagementModule {
     const personId = uid("person");
     const recordId = uid("record");
     const now = new Date().toISOString();
+    const presentation = deriveRecordPresentation(draft);
     await this.db.batch([
-      this.db.prepare("INSERT INTO people (id, slug, display_name, identity_mode, bio, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(personId, draft.participant.slug, draft.participant.displayName, draft.participant.identityMode, draft.participant.bio, now, now),
-      this.db.prepare("INSERT INTO interview_records (id, person_id, title, excerpt, conducted_at, ended_at, random_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(recordId, personId, draft.record.title, draft.record.excerpt, draft.record.conductedAt, draft.record.endedAt ?? null, Math.random(), now, now),
+      this.db.prepare("INSERT INTO people (id, slug, display_name, identity_mode, bio, created_at, updated_at) VALUES (?, ?, ?, ?, '', ?, ?)").bind(personId, personId, draft.participant.displayName, draft.participant.identityMode, now, now),
+      this.db.prepare("INSERT INTO interview_records (id, person_id, title, excerpt, conducted_at, random_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(recordId, personId, presentation.title, presentation.excerpt, draft.conductedAt, Math.random(), now, now),
       this.db.prepare("INSERT INTO record_owners (record_id, account_id, ownership_kind, granted_by, created_at) VALUES (?, ?, 'uploader', ?, ?)").bind(recordId, account.id, account.id, now),
       this.db.prepare("INSERT INTO record_drafts (record_id, revision, snapshot, updated_by, updated_at) VALUES (?, 1, ?, ?, ?)").bind(recordId, JSON.stringify(draft), account.id, now),
-      this.db.prepare("INSERT INTO source_records (id, record_id, source_type, platform_name, external_id, canonical_url, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(uid("source"), recordId, draft.source.sourceType, draft.source.platformName ?? null, draft.source.externalId ?? null, draft.source.canonicalUrl ?? null, now),
+      this.db.prepare("INSERT INTO source_records (id, record_id, source_type, platform_name, canonical_url, captured_at) VALUES (?, ?, ?, ?, ?, ?)").bind(uid("source"), recordId, draft.source.sourceType, draft.source.platformName ?? null, draft.source.canonicalUrl ?? null, now),
       this.audit(account, "record.created", recordId, "创建采访记录"),
     ]);
     return { recordId, revision: 1 };
   }
 
   async mine(account: Account) {
-    const base = `SELECT r.id, r.record_number, json_extract(d.snapshot, '$.record.title') AS title,
+    const base = `SELECT r.id, r.record_number, r.title,
       r.visibility, d.updated_at, d.revision
       FROM interview_records r JOIN record_drafts d ON d.record_id = r.id`;
     const statement = account.role === "director"
@@ -62,9 +63,12 @@ export class RecordManagementModule {
     await this.assertManage(recordId, account);
     const nextRevision = expectedRevision + 1;
     const now = new Date().toISOString();
+    const presentation = deriveRecordPresentation(draft);
     const results = await this.db.batch([
       this.db.prepare("UPDATE record_drafts SET revision = ?, snapshot = ?, updated_by = ?, updated_at = ? WHERE record_id = ? AND revision = ?").bind(nextRevision, JSON.stringify(draft), account.id, now, recordId, expectedRevision),
-      this.db.prepare("UPDATE source_records SET source_type = ?, platform_name = ?, external_id = ?, canonical_url = ? WHERE record_id = ? AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(draft.source.sourceType, draft.source.platformName ?? null, draft.source.externalId ?? null, draft.source.canonicalUrl ?? null, recordId, recordId, nextRevision),
+      this.db.prepare("UPDATE interview_records SET title = ?, excerpt = ?, conducted_at = ?, updated_at = ? WHERE id = ? AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(presentation.title, presentation.excerpt, draft.conductedAt, now, recordId, recordId, nextRevision),
+      this.db.prepare("UPDATE people SET display_name = ?, identity_mode = ?, updated_at = ? WHERE id = (SELECT person_id FROM interview_records WHERE id = ?) AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(draft.participant.displayName, draft.participant.identityMode, now, recordId, recordId, nextRevision),
+      this.db.prepare("UPDATE source_records SET source_type = ?, platform_name = ?, canonical_url = ? WHERE record_id = ? AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)").bind(draft.source.sourceType, draft.source.platformName ?? null, draft.source.canonicalUrl ?? null, recordId, recordId, nextRevision),
       this.db.prepare(`INSERT INTO audit_events (id, actor_account_id, actor_label, action, target_type, target_id, reason, created_at)
         SELECT ?, ?, ?, 'record.updated', 'interview_record', ?, ?, ?
         WHERE EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ? AND revision = ?)`).bind(uid("audit"), account.id, account.email, recordId, `保存修订 ${nextRevision}`, now, recordId, nextRevision),
@@ -93,20 +97,13 @@ export class RecordManagementModule {
     const now = new Date().toISOString();
     const contentHash = await digest(row.snapshot);
     const draft = JSON.parse(row.snapshot) as RecordDraft;
+    const presentation = deriveRecordPresentation(draft);
     const statements: D1PreparedStatement[] = [
       this.db.prepare("INSERT INTO published_editions (id, record_id, edition_number, snapshot, change_summary, published_by, published_at, supersedes_id, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(editionId, recordId, edition, row.snapshot, summary, account.id, now, row.current_edition_id, contentHash),
-      this.db.prepare("UPDATE interview_records SET record_number = ?, current_edition_id = ?, title = ?, excerpt = ?, conducted_at = ?, ended_at = ?, visibility = 'public', updated_at = ? WHERE id = ?").bind(recordNumber, editionId, draft.record.title, draft.record.excerpt, draft.record.conductedAt, draft.record.endedAt ?? null, now, recordId),
-      this.db.prepare("UPDATE people SET slug = ?, display_name = ?, identity_mode = ?, bio = ?, updated_at = ? WHERE id = (SELECT person_id FROM interview_records WHERE id = ?)").bind(draft.participant.slug, draft.participant.displayName, draft.participant.identityMode, draft.participant.bio, now, recordId),
-      this.db.prepare("DELETE FROM record_topics WHERE record_id = ?").bind(recordId),
+      this.db.prepare("UPDATE interview_records SET record_number = ?, current_edition_id = ?, title = ?, excerpt = ?, conducted_at = ?, ended_at = NULL, visibility = 'public', updated_at = ? WHERE id = ?").bind(recordNumber, editionId, presentation.title, presentation.excerpt, draft.conductedAt, now, recordId),
+      this.db.prepare("UPDATE people SET display_name = ?, identity_mode = ?, bio = '', updated_at = ? WHERE id = (SELECT person_id FROM interview_records WHERE id = ?)").bind(draft.participant.displayName, draft.participant.identityMode, now, recordId),
     ];
-    const unitIds = draft.units.map(() => uid("unit"));
-    const unitIdMap = new Map(draft.units.flatMap((unit, index) => unit.id ? [[unit.id, unitIds[index]!]] : []));
-    draft.units.forEach((unit, index) => statements.push(this.db.prepare("INSERT INTO conversation_units (id, record_id, edition_id, sequence, kind, speaker_role, body, occurred_at, duration_seconds, parent_unit_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(unitIds[index], recordId, editionId, index + 1, unit.kind, unit.speakerRole, unit.body, unit.occurredAt, unit.durationSeconds, unit.parentUnitId ? unitIdMap.get(unit.parentUnitId) ?? null : null)));
-    draft.topics.forEach((topic) => {
-      const topicId = `topic-${topic.slug}`;
-      statements.push(this.db.prepare("INSERT OR IGNORE INTO topics (id, slug, name) VALUES (?, ?, ?)").bind(topicId, topic.slug, topic.name));
-      statements.push(this.db.prepare("INSERT OR IGNORE INTO record_topics (record_id, topic_id) VALUES (?, ?)").bind(recordId, topicId));
-    });
+    draft.messages.forEach((message, index) => statements.push(this.db.prepare("INSERT INTO interview_messages (id, record_id, edition_id, sequence, speaker_role, body) VALUES (?, ?, ?, ?, ?, ?)").bind(uid("message"), recordId, editionId, index + 1, message.speakerRole, message.body)));
     statements.push(this.audit(account, "record.published", recordId, summary));
     await this.db.batch(statements);
     return { recordId, recordNumber, edition };

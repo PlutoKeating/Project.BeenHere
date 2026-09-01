@@ -4,7 +4,7 @@ export interface CorrectionInput {
   recordNumber?: string;
   requesterContact: string;
   requesterRole: "participant" | "reader" | "representative" | "other";
-  kind: "fact" | "identity" | "privacy" | "consent" | "supplement" | "topic" | "withdrawal";
+  kind: "fact" | "identity" | "privacy" | "consent" | "supplement" | "withdrawal";
   description: string;
 }
 

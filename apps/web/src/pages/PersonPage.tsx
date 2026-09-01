@@ -15,7 +15,6 @@ export function PersonPage() {
         <div className="tablet:col-span-8">
           <p className="record-label text-blueprint">PERSON RECORD / {data.person.identityMode}</p>
           <h1 className="mt-4 font-serif text-5xl font-semibold tablet:text-7xl">{data.person.displayName}</h1>
-          <p className="mt-6 max-w-xl font-serif text-base leading-8 text-ink-muted">{data.person.bio}</p>
         </div>
         <div className="flex items-end tablet:col-span-4 tablet:justify-end"><p className="record-label text-ink-muted">{data.records.length} RECORD{data.records.length === 1 ? "" : "S"}</p></div>
       </div>

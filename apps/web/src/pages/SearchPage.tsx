@@ -23,7 +23,7 @@ export function SearchPage() {
       <div className="mx-auto max-w-3xl text-center">
         <p className="record-label text-blueprint">FIND A TRACE</p>
         <h1 className="mt-4 font-serif text-4xl font-semibold tablet:text-6xl">寻找一份记录</h1>
-        <p className="mt-5 text-sm leading-7 text-ink-muted">搜索编号、名字、采访正文或普通话题。搜索帮助寻找，随机仍负责相遇。</p>
+        <p className="mt-5 text-sm leading-7 text-ink-muted">搜索编号、名字或采访正文。搜索帮助寻找，随机仍负责相遇。</p>
         <form onSubmit={submit} role="search" className="mt-10 flex items-end gap-3 border-b border-line-strong">
           <label htmlFor="record-search" className="sr-only">搜索采访记录</label>
           <Search size={20} className="mb-4 shrink-0 text-ink-muted" aria-hidden="true" />
@@ -36,7 +36,7 @@ export function SearchPage() {
         {error && <ErrorState message={error} />}
         {data && query && data.length > 0 && <><p className="record-label mb-6 text-ink-muted">{data.length} RECORDS FOUND</p><div className="grid gap-4 tablet:grid-cols-2 lg:grid-cols-3">{data.map((record) => <RecordCard key={record.id} record={record} />)}</div></>}
         {data && query && data.length === 0 && <EmptyState title="没有找到这份痕迹" body="换一个词，或者让随机带你去一份未曾寻找过的采访记录。" />}
-        {!query && <EmptyState title="从一个词开始" body="名字、年份、话题或一句记得的话，都可以成为入口。" />}
+        {!query && <EmptyState title="从一个词开始" body="名字、年份或一句记得的话，都可以成为入口。" />}
       </div>
     </section>
   );
