@@ -20,10 +20,10 @@ export function AuthPage({mode}:{mode:Mode}) {
   const token=params.get("token")??"", info=copy[mode];
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setBusy(true);setError("");setMessage("");
-    const data=new FormData(event.currentTarget),email=String(data.get("email")??""),password=String(data.get("password")??"");
+    const form=event.currentTarget,data=new FormData(form),email=String(data.get("email")??""),password=String(data.get("password")??"");
     try{
       if(mode==="login"){await api.login(email,password);const next=params.get("next");navigate(next?.startsWith("/")&&!next.startsWith("//")?next:"/studio",{replace:true});}
-      if(mode==="register"){const result=await api.register({email,displayName:String(data.get("displayName")??""),password});setMessage(result.message);event.currentTarget.reset();}
+      if(mode==="register"){const result=await api.register({email,displayName:String(data.get("displayName")??""),password});form.reset();setMessage(result.message);}
       if(mode==="forgot"){const result=await api.forgotPassword(email);setMessage(result.message);}
       if(mode==="reset"){await api.resetPassword(token,password);navigate("/studio",{replace:true});}
     }catch(cause){setError(cause instanceof Error?cause.message:"暂时无法完成请求。");}finally{setBusy(false);}
