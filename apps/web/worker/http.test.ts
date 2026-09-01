@@ -26,5 +26,8 @@ describe("session and CSRF boundary", () => {
     expect(policy).toContain("https://paddle-model-ecology.bj.bcebos.com");
 
     expect(staticHeaders).toContain(`Content-Security-Policy: ${policy}`);
+    expect(staticHeaders).toContain("script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'");
+    expect(staticHeaders).toContain("https://fonts.googleapis.com");
+    expect(staticHeaders).toContain("https://fonts.gstatic.com");
   });
 });

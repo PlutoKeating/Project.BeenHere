@@ -21,7 +21,7 @@
 
 - 私密截图不进入本站存储、日志或数据库，现有采访模型和部署单元保持不变。
 - 首页初始包不携带 OCR；首次实际识别需额外下载约 11MB 本站 Worker、约 6.3MB 模型和约 25MB WASM，弱网设备等待更久。
-- CSP 必须为同源 Worker 开启 WebAssembly，并只在 `connect-src` 放行固定模型/WASM 域名。
+- CSP 必须为同源 Worker 开启 WebAssembly，并只在 `connect-src` 放行固定模型/WASM 域名。主页面禁止 JavaScript 动态求值；只有固定同源路径的 PaddleOCR Worker 响应因内置 OpenCV 运行时需要而允许 `unsafe-eval`。
 - 第三方静态资源服务会看到常规请求元数据。固定资源不可用时 OCR 会失败，但不会影响阅读、账户、D1 或纯文本录入。
 - 左右位置只能提供建议，不能替代人工确认角色、内容、授权或公开决定。
 

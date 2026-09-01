@@ -74,7 +74,7 @@
 
 静态响应由 `apps/web/public/_headers` 设置；API/Worker 回退响应由 `worker/http.ts` 设置，两处策略必须同步：
 
-- `Content-Security-Policy`：资源默认同源，禁止 object、外部 base、frame ancestor；脚本只允许同源并为 OCR 开启 `wasm-unsafe-eval`，Worker 只允许同源；connect 除同源外只允许固定的 jsDelivr WASM 与 Paddle 模型域名。
+- `Content-Security-Policy`：页面资源默认同源，禁止 object、外部 base、frame ancestor；页面脚本只允许同源与 `wasm-unsafe-eval`，Worker 只允许同源；样式/字体仅额外允许 Google Fonts 固定域名，connect 仅额外允许固定的 jsDelivr WASM 与 Paddle 模型域名。锁定版本的 `/vendor/paddleocr-worker-0.4.2.js` 因其内置 OpenCV 运行时需要动态求值，只有该 Worker 响应额外允许 `unsafe-eval`，主页面不继承此权限。
 - `Strict-Transport-Security`：生产一年并包含子域。
 - `X-Frame-Options: DENY`。
 - `X-Content-Type-Options: nosniff`。
