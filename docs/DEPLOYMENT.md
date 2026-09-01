@@ -18,7 +18,7 @@
 
 生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。Cloudflare Vite Plugin 会生成重定向后的部署配置，且必须保留 `PRESENCE` binding 与 `PresenceRoom` export；Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
 
-`prebuild` 还会从精确锁定的 npm 依赖复制约 11MB 的官方 PaddleOCR 浏览器 Worker 到 `public/vendor/paddleocr-worker-0.4.2.js`。生成目录被 Git 忽略，CI 会从 `package-lock.json` 重建；这只是现有 Worker 的静态资产，不是新的 Cloudflare Worker 项目。PP-OCRv6 tiny 模型与 ONNX WASM 不进入部署包，浏览器按需从固定的 BCE BOS 与 jsDelivr 地址下载。
+`prebuild` 还会从精确锁定的 npm 依赖复制约 11MB 的官方 PaddleOCR 浏览器 Worker 到 `public/vendor/paddleocr-worker-0.4.2.js`。`deploy` 必须调用完整的 `npm run build`，不能绕过该生命周期。生成目录被 Git 忽略，CI 会从 `package-lock.json` 重建；这只是现有 Worker 的静态资产，不是新的 Cloudflare Worker 项目。PP-OCRv6 tiny 模型与 ONNX WASM 不进入部署包，浏览器按需从固定的 BCE BOS 与 jsDelivr 地址下载。
 
 ## 2. 配置源优先级
 

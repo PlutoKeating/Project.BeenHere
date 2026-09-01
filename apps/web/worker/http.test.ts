@@ -1,4 +1,6 @@
+/// <reference types="vite/client" />
 import { describe, expect, it } from "vitest";
+import staticHeaders from "../public/_headers?raw";
 import { clearSessionCookie, requireSameOrigin, secureAssetResponse, sessionCookie, setSessionCookie } from "./http";
 
 describe("session and CSRF boundary", () => {
@@ -22,5 +24,7 @@ describe("session and CSRF boundary", () => {
     expect(policy).toContain("worker-src 'self'");
     expect(policy).toContain("https://cdn.jsdelivr.net");
     expect(policy).toContain("https://paddle-model-ecology.bj.bcebos.com");
+
+    expect(staticHeaders).toContain(`Content-Security-Policy: ${policy}`);
   });
 });

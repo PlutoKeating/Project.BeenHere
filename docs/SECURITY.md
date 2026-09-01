@@ -72,7 +72,7 @@
 
 ## 8. 响应头
 
-静态响应设置：
+静态响应由 `apps/web/public/_headers` 设置；API/Worker 回退响应由 `worker/http.ts` 设置，两处策略必须同步：
 
 - `Content-Security-Policy`：资源默认同源，禁止 object、外部 base、frame ancestor；脚本只允许同源并为 OCR 开启 `wasm-unsafe-eval`，Worker 只允许同源；connect 除同源外只允许固定的 jsDelivr WASM 与 Paddle 模型域名。
 - `Strict-Transport-Security`：生产一年并包含子域。

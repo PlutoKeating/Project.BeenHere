@@ -3,6 +3,7 @@ import type { OcrImageResult } from "./ocr-conversation";
 const supportedImageTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const maxFiles = 5;
 const maxFileBytes = 15 * 1024 * 1024;
+const maxDecodedPixels = 40_000_000;
 const modelBase = "https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0";
 const wasmBase = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/";
 
@@ -97,6 +98,11 @@ class BrowserOcrWorker implements OcrRunner {
   async predict(input: unknown, params: Record<string, unknown> = {}) {
     if (!(input instanceof Blob)) throw new Error("OCR input must be an image file.");
     const imageBitmap = await createImageBitmap(input);
+    const dimensionError = validateOcrImageDimensions(imageBitmap.width, imageBitmap.height);
+    if (dimensionError) {
+      imageBitmap.close();
+      throw new Error(dimensionError);
+    }
     return this.request("predict", {
       sources: [{ kind: "imageBitmap", imageBitmap }],
       params,
@@ -144,6 +150,14 @@ export function validateOcrFiles(files: File[]): string | null {
   return null;
 }
 
+export function validateOcrImageDimensions(width: number, height: number): string | null {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return "截图尺寸无效，请重新导出后再试。";
+  }
+  if (width * height > maxDecodedPixels) return "单张截图像素过大，请裁切后分多张识别。";
+  return null;
+}
+
 async function createRunner(): Promise<OcrRunner> {
   const active = new BrowserOcrWorker();
   runnerInstance = active;
@@ -152,6 +166,7 @@ async function createRunner(): Promise<OcrRunner> {
     return active;
   } catch (error) {
     if (runnerInstance === active) runnerInstance = null;
+    await active.dispose();
     throw error;
   }
 }

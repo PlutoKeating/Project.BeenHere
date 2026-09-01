@@ -1,5 +1,5 @@
 import { ImagePlus, LoaderCircle, LockKeyhole, ScanText, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { conversationFromOcr, type OcrConversationResult } from "../lib/ocr-conversation";
 import { disposeOcrEngine, recognizeScreenshots, validateOcrFiles, type OcrProgress } from "../lib/ocr";
 
@@ -18,11 +18,14 @@ export function OcrImportPanel({ onImport }: { onImport: (result: OcrConversatio
   const busy = progress !== null;
 
   useEffect(() => () => {
-    abortRef.current?.abort();
+    if (abortRef.current) {
+      abortRef.current.abort();
+      void disposeOcrEngine().catch(() => undefined);
+    }
     for (const url of objectUrls.current) URL.revokeObjectURL(url);
   }, []);
 
-  function addScreenshots(files: File[]) {
+  const addScreenshots = useCallback((files: File[]) => {
     if (busy) return;
     const mergedFiles = [...screenshots.map(({ file }) => file), ...files]
       .filter((file, index, all) => all.findIndex((candidate) => candidate.name === file.name && candidate.size === file.size && candidate.lastModified === file.lastModified) === index);
@@ -45,7 +48,18 @@ export function OcrImportPanel({ onImport }: { onImport: (result: OcrConversatio
     setScreenshots((current) => [...current, ...additions]);
     setError(null);
     setNotice(null);
-  }
+  }, [busy, screenshots]);
+
+  useEffect(() => {
+    const pasteImages = (event: ClipboardEvent) => {
+      const files = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith("image/"));
+      if (!files.length) return;
+      event.preventDefault();
+      addScreenshots(files);
+    };
+    document.addEventListener("paste", pasteImages);
+    return () => document.removeEventListener("paste", pasteImages);
+  }, [addScreenshots]);
 
   function removeScreenshot(index: number) {
     setScreenshots((current) => current.filter((preview, currentIndex) => {
@@ -76,7 +90,11 @@ export function OcrImportPanel({ onImport }: { onImport: (result: OcrConversatio
     } catch (cause) {
       if (controller.signal.aborted || (cause instanceof DOMException && cause.name === "AbortError")) {
         setNotice("已取消截图识别。");
-      } else if (cause instanceof Error && cause.message.startsWith("没有识别到")) {
+      } else if (cause instanceof Error && (
+        cause.message.startsWith("没有识别到")
+        || cause.message.startsWith("单张截图像素过大")
+        || cause.message.startsWith("截图尺寸无效")
+      )) {
         setError(cause.message);
       } else {
         setError("识别模型加载或运行失败。请检查网络后重试，或改用下方的纯文本录入。");
@@ -100,24 +118,19 @@ export function OcrImportPanel({ onImport }: { onImport: (result: OcrConversatio
 
   return <div className="space-y-4">
     <div
-      className="grid min-h-40 place-items-center border border-dashed border-line-strong bg-subtle/35 p-5 text-center transition-colors hover:bg-subtle/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
-      tabIndex={0}
+      className="grid min-h-40 place-items-center border border-dashed border-line-strong bg-subtle/35 p-5 text-center transition-colors hover:bg-subtle/60"
       aria-label="粘贴或拖入聊天截图"
       aria-busy={busy}
       aria-disabled={busy}
-      onPaste={(event) => {
-        const files = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
-        if (files.length) { event.preventDefault(); addScreenshots(files); }
-      }}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => { event.preventDefault(); addScreenshots(Array.from(event.dataTransfer.files)); }}
     >
       <div>
         <ImagePlus className="mx-auto text-blueprint" size={28} aria-hidden="true" />
         <p className="mt-3 font-medium">粘贴或拖入聊天截图</p>
-        <p className="mt-2 text-sm leading-6 text-ink-muted">支持 PNG、JPEG、WebP，按对话顺序最多 5 张，每张不超过 15 MB。</p>
+        <p className="mt-2 text-sm leading-6 text-ink-muted">支持 PNG、JPEG、WebP，按对话顺序最多 5 张；每张不超过 15 MB、4000 万像素。</p>
         <p className="mt-1 text-xs leading-6 text-ink-muted">默认右侧为采访者、左侧为被采访者；识别后可以一键交换。</p>
-        <label className={`button-secondary mt-4 ${busy ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
+        <label className={`button-secondary mt-4 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${busy ? "pointer-events-none opacity-50" : "cursor-pointer"}`}>
           选择截图
           <input
             className="sr-only"

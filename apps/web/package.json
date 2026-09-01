@@ -13,7 +13,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
-    "deploy": "vite build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "cf:typegen": "wrangler types worker/env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply beenhere-records --local",
     "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote"

@@ -33,7 +33,7 @@ OcrImportPanel ── src/lib/ocr.ts ── browser Web Worker ── PaddleOCR.
 | `src/components/RequireAccount.tsx` | 调用 `/api/account/me`；401 时跳转登录并保留返回路径。 |
 | `src/components/RecordForm.tsx` | 当前手工录入适配器；未来录入方式在该边界扩展。 |
 | `src/components/OcrImportPanel.tsx` | 截图选择、粘贴、拖放、预览、识别进度、取消和错误恢复。 |
-| `src/lib/ocr.ts` | 图片限制、官方 OCR Worker 协议、模型初始化和逐图识别。 |
+| `src/lib/ocr.ts` | 图片类型、数量、体积与解码像素限制，官方 OCR Worker 协议、模型初始化和逐图识别。 |
 | `src/lib/ocr-conversation.ts` | 坐标到角色的纯函数模块；合并多行、过滤居中提示、跨图去重和 100 条上限。 |
 | `src/lib/api.ts` | 唯一 HTTP 客户端；统一 JSON、同源凭据与错误转换。 |
 | `src/lib/presence.ts` | 实时连接适配器；本地访客标识、消息校验、断线清值和退避重连。 |
