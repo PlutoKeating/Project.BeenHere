@@ -10,12 +10,15 @@
 | 静态资源 | Vite 产物 `apps/web/dist/client` → binding `ASSETS` | `wrangler.jsonc:assets` + Cloudflare Vite Plugin |
 | D1 | `beenhere-records` → binding `DB` | `wrangler.jsonc:d1_databases` |
 | Durable Object | SQLite-backed `PresenceRoom` → binding `PRESENCE` | `wrangler.jsonc:durable_objects` + `exports` |
+| OCR 浏览器 Worker | PaddleOCR.js 0.4.2 预构建静态资产 | `prebuild` → `public/vendor/` → Workers Assets |
 | SMTP | TLS 465 | 非敏感端点在 `vars`，凭据在 Worker Secrets |
 | 可观测性 | Workers Logs 开启，采样率 100% | `wrangler.jsonc:observability` |
 
 `workers_dev=false`、`preview_urls=false`，生产服务只通过唯一 custom domain 暴露。D1 的实际 UUID 只维护在 `wrangler.jsonc`，文档不重复，避免漂移。
 
 生产 build 同时生成浏览器产物 `dist/client` 和 Worker 产物 `dist/project_been_here`。Cloudflare Vite Plugin 会生成重定向后的部署配置，且必须保留 `PRESENCE` binding 与 `PresenceRoom` export；Wrangler 部署日志中的 “Using redirected Wrangler configuration” 属正常行为。`dist/` 与 `.wrangler/` 都是可重建、被忽略的产物，不得手工编辑或提交；原始配置仍是 `apps/web/wrangler.jsonc`。
+
+`prebuild` 还会从精确锁定的 npm 依赖复制约 11MB 的官方 PaddleOCR 浏览器 Worker 到 `public/vendor/paddleocr-worker-0.4.2.js`。生成目录被 Git 忽略，CI 会从 `package-lock.json` 重建；这只是现有 Worker 的静态资产，不是新的 Cloudflare Worker 项目。PP-OCRv6 tiny 模型与 ONNX WASM 不进入部署包，浏览器按需从固定的 BCE BOS 与 jsDelivr 地址下载。
 
 ## 2. 配置源优先级
 
@@ -191,5 +194,6 @@ curl --fail https://beenhere.arr2018.dpdns.org/api/health
 - 涉及账户邮件时，用受控测试账户验证 SMTP 接受、收件和一次性链接；验收后清理测试数据。
 - 涉及 schema 时核对迁移列表和关键只读计数。
 - 涉及在线状态时，建立两个 WebSocket 并分别发送不同 visitor UUID 的 hello 帧，验证第一个收到 1、两个连接都收到 2，并确认恶意 Origin 握手返回 403。
+- 涉及 OCR 时，确认 `/vendor/paddleocr-worker-0.4.2.js` 为 200 且带长期缓存；使用受控聊天截图完成一次浏览器识别，确认 CSP 仅放行固定模型/WASM 域名，Network 中没有截图上传请求，最后检查导入草稿 JSON 不含坐标、置信度或图片信息。
 
 回滚与恢复步骤见 [OPERATIONS.md](OPERATIONS.md)。

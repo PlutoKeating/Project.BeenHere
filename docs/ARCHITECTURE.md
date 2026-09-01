@@ -12,6 +12,8 @@ flowchart TD
   Assets[Workers Assets\nReact SPA]
   API[同源 API\n/api/*]
   Presence[Durable Object\nPresenceRoom]
+  OCR[浏览器 OCR Worker\nPaddleOCR.js]
+  Models[固定版本模型 / WASM\nBCE BOS + jsDelivr]
   D1[(Cloudflare D1\nbeenhere-records)]
   SMTP[Yeah SMTP\nTLS 465]
 
@@ -21,9 +23,11 @@ flowchart TD
   API -->|WebSocket /api/presence| Presence
   API --> D1
   API -->|账户事务邮件| SMTP
+  Browser -->|本地传递截图| OCR
+  OCR -->|仅下载静态运行资源| Models
 ```
 
-Worker 是唯一应用入口。`/api/*` 必须先经过 Worker；其他路径由 Workers Assets 提供静态文件，未知前端路径回退到 `index.html`，由 React Router 处理。浏览器不直连 D1 或 SMTP。
+Worker 是唯一应用入口。`/api/*` 必须先经过 Worker；其他路径由 Workers Assets 提供静态文件，未知前端路径回退到 `index.html`，由 React Router 处理。浏览器不直连 D1 或 SMTP。OCR 是浏览器内计算：截图只传给本站静态提供的专用 Web Worker；该 Worker 从固定第三方地址下载模型与 WASM，但不向这些地址发送截图。
 
 ## 2. 技术栈与源文件
 
@@ -35,6 +39,7 @@ Worker 是唯一应用入口。`/api/*` 必须先经过 Worker；其他路径由
 | 验证 | Zod 4 | `worker/index.ts` 的请求 schema |
 | 数据 | Cloudflare D1 / SQLite | `apps/web/migrations/` |
 | 实时协调 | Cloudflare Durable Object / WebSocket Hibernation | `worker/presence.ts`、`wrangler.jsonc` |
+| 截图识别 | PaddleOCR.js 0.4.2 / PP-OCRv6 tiny / ONNX Runtime WASM | `src/lib/ocr.ts`、`src/lib/ocr-conversation.ts` |
 | 邮件 | Worker TCP Socket → SMTP over TLS 465 | `worker/smtp.ts` |
 | 测试 | Vitest、JSDOM | `*.test.ts(x)` |
 | 部署 | GitHub Actions、Wrangler 4.127.1 | `.github/workflows/ci.yml` |
@@ -90,6 +95,7 @@ sequenceDiagram
 | `RecordManagementModule` | 创建、更新、公开、删除、认领 | 成员必须是记录主人；馆长可管理全部；写操作带审计。 |
 | `GovernanceModule` | 更正与撤回请求 | 公众只能提交请求，不能直接修改采访记录。 |
 | `PresenceRoom` | 连接、按访客去重、人数广播 | 只保留活动 WebSocket 附件；不持久化浏览历史、IP 或采访内容。 |
+| `ScreenshotRecognition` | 截图校验、OCR、布局解析、双角色消息导入 | 原图不上传或持久化；临时置信度不进入正式草稿；最多导入 100 条消息。 |
 
 Web 模块目录约定见 [`apps/web/docs/README.md`](../apps/web/docs/README.md)，HTTP 契约见 [API.md](API.md)。
 
@@ -172,6 +178,20 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 `PresenceRoom` 使用 WebSocket Hibernation；休眠恢复后人数直接从连接附件重建，不依赖 Worker 内存或 D1 心跳。当前 visitor UUID 只是浏览器级去重键，不是认证或授权依据。
 
+### 截图录入
+
+```text
+选择 / 拖入 / 粘贴 1–5 张截图 → 校验 MIME、数量与单图大小
+  → 首次按需加载本站 OCR Worker、PP-OCRv6 tiny 模型与固定 ONNX WASM
+  → 浏览器逐图识别文字、坐标和置信度
+  → 按外侧边距推断左右角色，过滤居中文字，合并同气泡多行，去除长截图重叠
+  → 最多生成 100 条临时消息，标出低置信度
+  → 用户交换双方或逐条校对
+  → 提交时只保留 speakerRole 与 body
+```
+
+默认右侧为采访者、左侧为被采访者；这是录入建议而非事实，必须由用户确认。图片 Object URL 只用于当前组件预览，页面卸载或移除图片时释放。模型与运行时初始化失败时保留纯文本粘贴回退，不向服务端提交截图。
+
 ## 8. 权限矩阵
 
 | 能力 | 路人 | 成员 | 记录主人 | 馆长 |
@@ -189,6 +209,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 - 相关 D1 写入使用 `DB.batch()`，失败时整批回滚。
 - 草稿更新依赖 `expectedRevision`；冲突返回 409，客户端必须重新加载，不能静默覆盖。
 - SMTP 发送失败时撤销新建的一次性令牌；注册账户可保持 pending 并重新注册触发新邮件。
+- OCR 初始化或推理失败只影响当前浏览器的辅助录入；界面提供重试与纯文本回退，正式采访数据和 D1 不受影响。
 - 忘记密码始终返回相同成功文案，降低账户枚举风险；实际邮件失败只写 Worker 错误日志。
 - 未处理异常对外统一返回 500 通用文案，详细错误只进入 Worker 日志。
 
@@ -197,6 +218,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 - 当前是单一生产环境，没有独立 staging Worker 或 staging D1。
 - 当前没有 MFA、验证码、人机挑战或外部告警系统。
 - 当前只有全站在线人数；没有匹配意愿、随机匹配、双盲采访房间或实时消息持久化。单一全局房间适合当前规模，接近单对象连接容量前必须改为分片房间与聚合计数。
+- OCR 首次使用需要下载约 11MB 本站 Worker、约 6.3MB 模型和约 25MB WASM；弱网或低内存设备可能较慢。当前不提供服务端 OCR 后备，以避免上传私密截图和扩展现有单 Worker 基础设施。
 - 馆长角色由 `SUPERADMIN_EMAILS` 在注册时决定；修改该 Secret 不会自动改变已存在账户角色。
 - 过期会话、邮件动作和限流桶没有定时任务；按[运维手册](OPERATIONS.md)执行周期清理。
 - D1 Time Travel 是短期恢复手段，不是长期独立归档。

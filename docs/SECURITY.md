@@ -74,7 +74,7 @@
 
 静态响应设置：
 
-- `Content-Security-Policy`：资源默认同源，禁止 object、外部 base、frame ancestor；connect 仅同源。
+- `Content-Security-Policy`：资源默认同源，禁止 object、外部 base、frame ancestor；脚本只允许同源并为 OCR 开启 `wasm-unsafe-eval`，Worker 只允许同源；connect 除同源外只允许固定的 jsDelivr WASM 与 Paddle 模型域名。
 - `Strict-Transport-Security`：生产一年并包含子域。
 - `X-Frame-Options: DENY`。
 - `X-Content-Type-Options: nosniff`。
@@ -114,6 +114,8 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 - 公开版本不可变；修改产生新版本与内容摘要，避免静默覆盖历史。
 - 采访记录软删除保留版本与审计；账户删除保留匿名引用。
 - 原始来源材料不应放进公开字段；当前系统尚未实现私有附件存储。
+- OCR 原始截图只存在于用户选择的浏览器 File、临时 Object URL 与浏览器 OCR Worker 内存中；不上传 Worker API、不写入 D1/R2/日志，也不作为来源证据。模型与 WASM 供应方会看到静态资源请求的常规网络元数据，但不会收到截图字节。
+- OCR 结果的坐标和置信度只用于当前校对界面；提交 `RecordDraft` 时显式重建消息对象，只保留 `speakerRole` 与 `body`。
 - 在线 visitor UUID 只保存在浏览器 localStorage 与活动 WebSocket attachment，不进入 URL，不写入 D1 或应用日志，也不主动关联 IP、路径或账户；Cloudflare 仍会按其平台规则处理连接元数据。对外只广播聚合人数。
 
 ## 12. 已知边界与后续门禁

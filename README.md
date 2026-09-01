@@ -8,7 +8,7 @@
 
 - 路人无需登录，可阅读、搜索、随机发现全部公开采访记录，也可提交更正或撤回请求。
 - 页面与本站保持连接时会进入实时在线统计；至少两位访客在线时，页面顶部显示当前人数。
-- 登录成员可粘贴已有对话，快速校对双方消息归属，再修改、公开和软删除自己拥有的采访记录。
+- 登录成员可直接粘贴或拖入聊天截图，由浏览器端 OCR 转为双方纯文本消息；也可粘贴已有文字。校对双方归属后，可修改、公开和软删除自己拥有的采访记录。
 - 被采访者可提交带说明的认领申请；记录主人同意后，申请人成为共同主人并可编辑。
 - 馆长可管理账户及全部采访记录。
 
@@ -16,7 +16,7 @@
 
 ## 技术结构
 
-React 19、Tailwind CSS 4 与 Vite 构成响应式前端；Cloudflare Worker 提供同源 API、静态资源和 SMTP 客户端；Cloudflare Durable Object 通过休眠 WebSocket 协调实时在线状态；Cloudflare D1 保存账户、采访记录、版本、所有权、认领和审计数据。唯一可验证的生产发布链路是 `main` → GitHub Actions → Wrangler → Cloudflare Worker。
+React 19、Tailwind CSS 4 与 Vite 构成响应式前端；PaddleOCR.js 在浏览器专用 Worker 中识别聊天截图，截图不上传服务器；Cloudflare Worker 提供同源 API、静态资源和 SMTP 客户端；Cloudflare Durable Object 通过休眠 WebSocket 协调实时在线状态；Cloudflare D1 保存账户、采访记录、版本、所有权、认领和审计数据。唯一可验证的生产发布链路是 `main` → GitHub Actions → Wrangler → Cloudflare Worker。
 
 ## 文档入口
 

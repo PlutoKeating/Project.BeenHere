@@ -17,6 +17,9 @@ src/lib/api.ts ── same-origin HTTP ── worker/index.ts
              └────────────────────────────────────── D1
 
 src/lib/presence.ts ── WebSocket ── worker/presence.ts ── PresenceRoom
+
+OcrImportPanel ── src/lib/ocr.ts ── browser Web Worker ── PaddleOCR.js
+               └─ src/lib/ocr-conversation.ts ── RecordDraft.messages
 ```
 
 浏览器端不导入 Worker 模块、不读取 D1 字段，也不接触 SMTP 或会话密钥。业务授权必须在 Worker 内再次判断，不能依赖前端隐藏按钮。
@@ -29,6 +32,9 @@ src/lib/presence.ts ── WebSocket ── worker/presence.ts ── PresenceRo
 | `src/components/AppShell.tsx` | 顶部导航、移动底部 Tab、主题与账户入口。 |
 | `src/components/RequireAccount.tsx` | 调用 `/api/account/me`；401 时跳转登录并保留返回路径。 |
 | `src/components/RecordForm.tsx` | 当前手工录入适配器；未来录入方式在该边界扩展。 |
+| `src/components/OcrImportPanel.tsx` | 截图选择、粘贴、拖放、预览、识别进度、取消和错误恢复。 |
+| `src/lib/ocr.ts` | 图片限制、官方 OCR Worker 协议、模型初始化和逐图识别。 |
+| `src/lib/ocr-conversation.ts` | 坐标到角色的纯函数模块；合并多行、过滤居中提示、跨图去重和 100 条上限。 |
 | `src/lib/api.ts` | 唯一 HTTP 客户端；统一 JSON、同源凭据与错误转换。 |
 | `src/lib/presence.ts` | 实时连接适配器；本地访客标识、消息校验、断线清值和退避重连。 |
 | `src/styles/tokens.css` | primitive → semantic → component 三层 Token。 |
@@ -59,6 +65,7 @@ src/lib/presence.ts ── WebSocket ── worker/presence.ts ── PresenceRo
 - 新公开查询进入 `RecordRepository`，不绕过 visibility 条件。
 - 新写操作进入 `RecordManagementModule`，必须先检查记录主人或馆长权限并写审计事件。
 - 新录入方式转换为同一个 `RecordDraft`，不新增兼容版采访记录定义。
+- OCR 坐标、置信度、截图文件和预览 URL 都是浏览器临时状态；提交前必须剥离，只保留 `speakerRole` 与 `body`。
 - 新认证动作复用 `account_actions` 的一次性令牌机制，不把令牌明文入库。
 - 新 HTTP 路径同时更新 `worker/index.ts`、`src/lib/api.ts`、根部 `docs/API.md` 和测试。
 - 新实时消息类型集中在 `worker/presence.ts` 与 `src/lib/presence.ts` 的窄接口内；账户身份、匹配和采访消息不得把 visitor UUID 当作授权凭据。

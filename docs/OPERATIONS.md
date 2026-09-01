@@ -113,6 +113,14 @@ SMTP Password 失效时先在邮箱提供商生成新授权凭据，再交互执
 3. 查看最新 Worker deployment 是否包含 `PRESENCE` binding 和 `PresenceRoom` export，再查看 Durable Object invocation/error 指标。
 4. 人数短暂不下降通常是网络断开尚未完成；客户端断线会先隐藏旧值，服务端在 WebSocket close/error 后广播新值。持续异常时记录连接时间与 deployment，禁止通过 D1 DELETE 处理，因为在线状态不在 D1。
 
+### 截图 OCR 无法加载或识别
+
+1. 确认 `/vendor/paddleocr-worker-0.4.2.js` 返回 200，且生产 build 中该文件约 11MB、单文件低于 Cloudflare Assets 限制。
+2. 在浏览器 Network 检查 PP-OCRv6 tiny 的两个 `.tar` 和 jsDelivr `ort-wasm-simd-threaded.jsep.wasm`；CSP 错误应同时出现在控制台。
+3. 确认页面 CSP 包含同源 `worker-src`、`wasm-unsafe-eval`，并只在 `connect-src` 放行文档记录的两个域名。不要为临时排障改成通配 `https:`。
+4. 用受控、无真实个人信息的截图复现。不得要求用户上传私密原图到 issue、日志或公共对象存储。
+5. OCR 失败不影响 D1 与现有采访记录；指导用户展开纯文本录入。若固定上游资源长期不可用，再通过代码评审更换固定版本或自托管资产，不新建第二个生产 Worker 绕过。
+
 ### CI 失败
 
 - verify 失败：修复 typecheck/test/build 或根 Markdown 布局，不能跳过 deploy 门禁。

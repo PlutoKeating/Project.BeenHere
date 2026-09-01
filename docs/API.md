@@ -98,6 +98,8 @@
 
 全部要求 active 会话。普通成员只能管理 `record_owners` 中自己的记录；馆长可管理全部。
 
+聊天截图 OCR 完全在浏览器中执行，不新增上传接口。`POST /api/account/records` 与草稿更新只接收下面的规范化纯文本 `draft`；截图、OCR 坐标和置信度不得进入请求。
+
 | 方法与路径 | 说明 |
 |---|---|
 | `GET /api/account/records` | 当前账户可管理的记录。 |
