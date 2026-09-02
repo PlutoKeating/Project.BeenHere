@@ -1,44 +1,45 @@
+<div align="center">
+
 # Project.BeenHere · 来过
 
-一个公开保存陌生人随机采访陌生人之真实对话的网站。内容统一称为“采访记录”；抖音等平台负责对话发生与传播，本站以采访者与被采访者的纯文本消息保存、长期维护、认领与更正。
+### 今天，<br />你会遇见谁？
 
-生产地址：<https://beenhere.arr2018.dpdns.org>
+这里没有重要人物，只有被认真保存的普通时刻。打开一份采访记录，遇见一个本不会认识的人。
 
-## 使用方式
+[进入来过](https://beenhere.arr2018.dpdns.org) · [捡起一个漂流瓶](https://beenhere.arr2018.dpdns.org/drift)
 
-- 路人无需登录，可阅读、搜索、随机发现全部公开采访记录，也可提交更正或撤回请求。
-- 页面与本站保持连接时会进入实时在线统计；至少两位访客在线时，页面顶部显示当前人数。
-- 登录成员可直接粘贴或拖入聊天截图，由浏览器端 OCR 转为双方纯文本消息；也可粘贴已有文字。校对双方归属后，可修改、公开和软删除自己拥有的采访记录。
-- 被采访者可提交带说明的认领申请；记录主人同意后，申请人成为共同主人并可编辑。
-- 馆长可管理账户及全部采访记录。
+</div>
 
-账户使用邮箱注册与验证。密码只保存 PBKDF2-SHA-256 派生值；站内支持登录、找回密码、修改用户名/邮箱/密码和邮件确认删除账户。
+---
 
-## 技术结构
+## 每个普通人，都值得被认真听见
 
-当前仓库只有 `apps/web` 一个 npm workspace 和一个生产部署单元：
+社交平台让对话发生，也让它们很快消失。来过把陌生人之间真实发生的采访，从流动的信息里轻轻拾起，保存为长久可读、可以认领、也可以更正与撤回的公开记录。
 
-- React 19.2.8、React Router 7.18.3、Tailwind CSS 4.3.3、Vite 8.2.2 与 TypeScript 7.0.2 构成响应式 SPA。
-- Cloudflare Workers Assets 提供前端静态文件；同一 `project-been-here` Worker 提供 `/api/*`、D1 访问与 SMTP 客户端。
-- SQLite-backed `PresenceRoom` Durable Object 通过 WebSocket Hibernation 维护全站实时在线人数。
-- D1 `beenhere-records` 保存账户、精简采访草稿、不可变公开版本、双角色消息、所有权、认领、更正和审计。
-- PaddleOCR.js 0.4.2 在浏览器专用 Worker 中识别截图；PP-OCRv6 tiny 模型来自 Paddle BCE，ONNX Runtime 1.24.3 模块与 WASM 来自 jsDelivr，截图字节不会发送到这些服务。
-- 事务邮件由 Worker 通过 `cloudflare:sockets` 连接 Yeah SMTP TLS 465；字体样式来自 Google Fonts，均受 CSP 固定来源限制。
+不追逐热度，不排列重要性。编号只代表抵达的顺序。
 
-没有第二个 OCR Worker 项目、R2/KV 业务存储、独立 staging、Cron、Turnstile/WAF 仓库配置或服务端 OCR。唯一权威生产发布链路是 `main` → GitHub Actions → Wrangler → 现有 Cloudflare Worker。
+## 在这里
 
-## 文档入口
+- **偶然相遇** — 随机打开一份采访记录，认识一个原本不会认识的人。
+- **忠于原话** — 每条记录只保留采访者与被采访者的纯文本对话，以及必要的来源说明。
+- **轻松保存** — 粘贴文字，或直接拖入聊天截图；在浏览器中识别、校对，补充最少信息即可保存。
+- **共同维护** — 被采访者可以认领关于自己的记录，与记录主人一起修订。
+- **保留选择** — 任何人都可以提出更正、匿名化或停止公开；人的尊严永远先于内容完整性。
 
-- [技术架构](docs/ARCHITECTURE.md)：运行时拓扑、模块边界、数据模型和关键流程。
-- [HTTP API](docs/API.md)：接口、权限、请求与响应约定。
-- [部署架构](docs/DEPLOYMENT.md)：环境、Secrets、CI/CD、标准发布与验收。
-- [运维手册](docs/OPERATIONS.md)：监控、故障处理、回滚、D1 恢复与密钥轮换。
-- [安全模型](docs/SECURITY.md)：认证、授权、令牌、限流和已知边界。
-- [本地启动](docs/QUICK_START.md)：开发环境、D1 初始化和验证命令。
-- [领域语言](docs/CONTEXT.md)、[内容规范](docs/content.md)、[设计原则](docs/DESIGN_SOUL.md)、[设计系统](docs/DESIGN_SYSTEM.md)。
+> [!NOTE]
+> 聊天截图只在你的浏览器中参与识别，不会上传、保存，也不会成为公开记录的一部分。机器只负责减少录入劳动，最终文字、角色与公开决定始终由人确认。
 
-```bash
-npm ci
-npm run dev
-npm run check
-```
+**真实相遇** → **整理对话** → **确认双方** → **公开留存** → **认领与共同维护**
+
+## 继续遇见
+
+[浏览全部记录](https://beenhere.arr2018.dpdns.org/records) · [了解记录方法](https://beenhere.arr2018.dpdns.org/method) · [更正与撤回](https://beenhere.arr2018.dpdns.org/corrections)
+
+<details>
+<summary>为建设者准备的文档</summary>
+
+[技术架构](docs/ARCHITECTURE.md) · [本地启动](docs/QUICK_START.md) · [API](docs/API.md) · [部署](docs/DEPLOYMENT.md) · [运维](docs/OPERATIONS.md) · [安全](docs/SECURITY.md)
+
+</details>
+
+<p align="center">如果你也相信普通人的表达值得留下，欢迎为「来过」点一颗 Star。</p>
