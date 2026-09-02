@@ -94,13 +94,20 @@ function reassembleTitle(clause: string): string {
     .trim();
 }
 
+function neutralInterviewTitle(displayName: string): string {
+  const prefix = "与";
+  const suffix = "的一次采访";
+  const availableNameLength = 48 - Array.from(prefix + suffix).length;
+  return `${prefix}${Array.from(displayName).slice(0, availableNameLength).join("")}${suffix}`;
+}
+
 export function deriveInterviewTitle(draft: RecordDraft): string {
   const clauses = titleClauses(draft);
   const keyPhrase = repeatedKeyPhrase(clauses);
   const representative = representativeClause(clauses, keyPhrase);
   const title = reassembleTitle(representative) || keyPhrase;
   const meaningfulCharacters = new Set(Array.from(title ?? "").filter((character) => /[\p{L}\p{N}]/u.test(character)));
-  const result = title && meaningfulCharacters.size >= 2 && !genericTitlePhrase.test(title) ? title : `与${draft.participant.displayName}的一次采访`;
+  const result = title && meaningfulCharacters.size >= 2 && !genericTitlePhrase.test(title) ? title : neutralInterviewTitle(draft.participant.displayName);
   return Array.from(result).slice(0, 48).join("");
 }
 

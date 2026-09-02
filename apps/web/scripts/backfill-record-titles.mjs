@@ -24,7 +24,7 @@ function loadRows() {
     `SELECT r.id, r.record_number, r.visibility, r.title, r.current_edition_id, d.revision,
       CASE WHEN r.current_edition_id IS NOT NULL THEN pe.snapshot ELSE d.snapshot END AS snapshot
       FROM interview_records r
-      JOIN record_drafts d ON d.record_id = r.id
+      LEFT JOIN record_drafts d ON d.record_id = r.id
       LEFT JOIN published_editions pe ON pe.id = r.current_edition_id
       ORDER BY r.created_at`,
   ]);
@@ -32,6 +32,8 @@ function loadRows() {
 }
 
 const rows = loadRows();
+const recordsWithoutSnapshots = rows.filter((row) => !row.snapshot);
+if (recordsWithoutSnapshots.length > 0) throw new Error(`${recordsWithoutSnapshots.length} records have neither a current published snapshot nor a draft snapshot.`);
 const proposals = rows.map((row) => ({
   ...row,
   nextTitle: deriveInterviewTitle(JSON.parse(row.snapshot)),
@@ -52,10 +54,13 @@ const recovery = runWrangler(["d1", "time-travel", "info", database, "--json"]);
 console.log(`Recovery bookmark before write: ${recovery.bookmark}`);
 
 for (const proposal of proposals) {
+  const draftRevisionGuard = proposal.current_edition_id === null
+    ? `AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ${sql(proposal.id)} AND revision = ${Number(proposal.revision)})`
+    : "";
   const command = `UPDATE interview_records SET title = ${sql(proposal.nextTitle)}
     WHERE id = ${sql(proposal.id)} AND title = ${sql(proposal.title)}
       AND COALESCE(current_edition_id, '') = ${sql(proposal.current_edition_id ?? "")}
-      AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ${sql(proposal.id)} AND revision = ${Number(proposal.revision)});`;
+      ${draftRevisionGuard};`;
   runWrangler(["d1", "execute", database, "--remote", "--json", "--command", command]);
 }
 

@@ -119,6 +119,20 @@ describe("text interview presentation", () => {
     });
     expect(result.title).toBe("与小林的一次采访");
   });
+
+  it("preserves the neutral-title suffix when the display name is long", () => {
+    const result = deriveRecordPresentation({
+      participant: { displayName: "林".repeat(80), identityMode: "pseudonym" },
+      conductedAt: "2026-09-02T00:00:00.000Z",
+      messages: [
+        { speakerRole: "interviewer", body: "准备好了吗？" },
+        { speakerRole: "participant", body: "好的" },
+      ],
+      source: { sourceType: "direct" },
+    });
+    expect(result.title).toHaveLength(48);
+    expect(result.title).toMatch(/^与林+的一次采访$/u);
+  });
 });
 
 describe("automated interview provenance", () => {
