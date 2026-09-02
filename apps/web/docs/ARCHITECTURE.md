@@ -32,7 +32,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 | 路径 | 职责 |
 |---|---|
 | `src/App.tsx` | 唯一路由表；区分公共、认证和受保护页面。 |
-| `src/components/AppShell.tsx` | 顶部导航、移动底部 Tab、主题、账户与公共政策入口。 |
+| `src/components/AppShell.tsx` | 顶部导航、移动底部 Tab、主题、账户入口，以及不会被响应式换行打散的三组语义页脚导航。 |
 | `src/components/RequireAccount.tsx` | 调用 `/api/account/me`；401 时跳转登录并保留返回路径。 |
 | `src/components/RecordForm.tsx` | 所有录入方式汇合到统一 `RecordDraft`；承接 OCR/纯文本导入、角色校对和最少公开信息，并锁定自动采访来源事实。 |
 | `src/pages/AutomatedInterviewPage.tsx` | 自动化身份与知情说明、整页单滚动区采访交互、跳过/结束、安全停止和人工整理入口。 |

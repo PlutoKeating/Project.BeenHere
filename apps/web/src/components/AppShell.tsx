@@ -62,7 +62,41 @@ export function AppShell() {
       </nav>}
     </header>
     <main><Outlet/></main>
-    <footer className="mt-24 border-t border-line"><div className="page-shell grid gap-8 py-12 tablet:grid-cols-2"><div><p className="font-serif text-lg font-semibold">Project.BeenHere · 来过</p><p className="mt-2 text-xs leading-6 text-ink-muted">认真保存陌生人之间真实发生的采访记录。</p><p className="mt-3 text-xs leading-6 text-ink-muted"><a href="https://github.com/PlutoKeating/Project.BeenHere" target="_blank" rel="noreferrer">开放源代码</a> · <a href="https://github.com/PlutoKeating/Project.BeenHere/blob/main/LICENCE" target="_blank" rel="noreferrer">AGPLv3</a> · 本软件不提供任何担保。</p></div><nav aria-label="页脚导航" className="flex flex-wrap gap-5 text-sm tablet:justify-end"><NavLink to="/about">About Us</NavLink><NavLink to="/privacy">Privacy</NavLink><NavLink to="/terms">Terms &amp; Conditions</NavLink><NavLink to="/method">记录方法</NavLink><NavLink to="/corrections">更正与撤回</NavLink><AccountLink>账户中心</AccountLink></nav></div></footer>
+    <footer className="mt-24 border-t border-line">
+      <div className="page-shell grid gap-10 py-12 tablet:grid-cols-[minmax(220px,0.8fr)_minmax(0,1.5fr)] tablet:gap-12">
+        <div>
+          <p className="font-serif text-lg font-semibold">Project.BeenHere · 来过</p>
+          <p className="mt-2 max-w-sm text-xs leading-6 text-ink-muted">认真保存陌生人之间真实发生的采访记录。</p>
+          <p className="mt-4 text-xs leading-6 text-ink-muted">本软件不提供任何担保。</p>
+        </div>
+        <nav aria-label="页脚导航" className="grid grid-cols-2 gap-x-8 gap-y-9 text-sm tablet:grid-cols-3 tablet:gap-x-10">
+          <section aria-labelledby="footer-discover">
+            <h2 id="footer-discover" className="record-label mb-2 text-[10px] text-ink-muted">了解来过</h2>
+            <ul>
+              <li><NavLink className="inline-flex min-h-11 items-center" to="/about">About Us</NavLink></li>
+              <li><NavLink className="inline-flex min-h-11 items-center" to="/method">记录方法</NavLink></li>
+              <li><NavLink className="inline-flex min-h-11 items-center" to="/records">全部记录</NavLink></li>
+            </ul>
+          </section>
+          <section aria-labelledby="footer-rights">
+            <h2 id="footer-rights" className="record-label mb-2 text-[10px] text-ink-muted">规则与权利</h2>
+            <ul>
+              <li><NavLink className="inline-flex min-h-11 items-center" to="/privacy">Privacy</NavLink></li>
+              <li><NavLink className="inline-flex min-h-11 items-center" to="/terms">Terms &amp; Conditions</NavLink></li>
+              <li><NavLink className="inline-flex min-h-11 items-center" to="/corrections">更正与撤回</NavLink></li>
+            </ul>
+          </section>
+          <section aria-labelledby="footer-project">
+            <h2 id="footer-project" className="record-label mb-2 text-[10px] text-ink-muted">项目与账户</h2>
+            <ul>
+              <li><a className="inline-flex min-h-11 items-center" href="https://github.com/PlutoKeating/Project.BeenHere" target="_blank" rel="noreferrer">开放源代码</a></li>
+              <li><a className="inline-flex min-h-11 items-center" href="https://github.com/PlutoKeating/Project.BeenHere/blob/main/LICENCE" target="_blank" rel="noreferrer">AGPLv3</a></li>
+              <li><AccountLink className="inline-flex min-h-11 items-center">账户中心</AccountLink></li>
+            </ul>
+          </section>
+        </nav>
+      </div>
+    </footer>
     <MobileTabBar/>
   </div>;
 }
