@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowRight, Compass } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowDown, ArrowRight, Compass, MessageCircleQuestion } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { RecordCard } from "../components/RecordCard";
 import { RecordMark } from "../components/RecordMark";
 import { ErrorState, LoadingState } from "../components/AsyncState";
@@ -34,6 +34,9 @@ export function HomePage() {
             <a href="#today" className="button-secondary">
               浏览采访记录 <ArrowDown size={16} aria-hidden="true" />
             </a>
+            <Link to="/studio/interview" className="button-secondary border-seal/60 text-seal hover:bg-seal/5">
+              <MessageCircleQuestion size={17} aria-hidden="true" />开始自动采访
+            </Link>
           </div>
         </div>
         <div className="mt-14 flex justify-end tablet:col-span-2 tablet:mt-0 tablet:self-end tablet:pb-14">

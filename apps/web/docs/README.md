@@ -27,6 +27,8 @@ npm run prepare:ocr
 
 登录成员还可从 `/studio/interview` 开始浏览器内自动采访。它由 `src/lib/automated-interview.ts` 的确定性规则驱动，不调用外部模型，也不持久化进行中内容；正常结束后只把可见双角色文本交给现有 `RecordForm`，保存为当前账户本人认领的未公开记录。采访开始时间与机器提问由前后端共同锁定，受访者自己的回答仍可编辑或删除。
 
+首页首屏大按钮组提供 `/studio/interview` 入口；未登录访客由现有 `RequireAccount` 跳转登录并保留返回路径，登录后仍须先完成自动程序知情确认。
+
 `/about`、`/privacy`、`/terms` 是公共信任页面；顶栏/移动更多菜单、页脚、注册页和自动采访知情说明提供入口。修改账户、内容公开、第三方资源或保留期限时必须同步这些页面。
 
 `npm run deploy` 直接面向 `wrangler.jsonc` 中的现有生产 Worker/custom domain，不是本地预览命令；只在完成生产授权、D1 recovery bookmark 与全量门禁后使用。日常发布仍以根文档规定的 GitHub Actions 链路为准。
