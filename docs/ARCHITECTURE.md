@@ -82,7 +82,7 @@ sequenceDiagram
 |---|---|---|
 | 公共 | `/`、`/records`、`/records/:recordNumber`、`/drift`、`/search`、人物/年份、`/method`、`/corrections` | 无需登录 |
 | 认证 | `/auth/login`、`/auth/register`、找回密码与四类邮件确认页 | 无需登录 |
-| 成员 | `/studio`、`/studio/new`、记录编辑、认领、`/account/settings` | active 会话 |
+| 成员 | `/studio`、`/studio/interview`、`/studio/new`、记录编辑、认领、`/account/settings` | active 会话 |
 | 馆长 | `/director/accounts` | active 且 role=director |
 
 `RequireAccount` 只负责前端体验；真正的身份与权限判断始终在 Worker 中执行。
@@ -97,6 +97,7 @@ sequenceDiagram
 | `GovernanceModule` | 更正与撤回请求 | 公众只能提交请求，不能直接修改采访记录。 |
 | `PresenceRoom` | 连接、按访客去重、人数广播 | 只保留活动 WebSocket 附件；不持久化浏览历史、IP 或采访内容。 |
 | `ScreenshotRecognition` | 截图校验、OCR、布局解析、双角色消息导入 | 原图不上传或持久化；临时置信度不进入正式草稿；最多导入 100 条消息。 |
+| `AutomatedInterview` | 固定提纲、ELIZA 式 rank/分解/重组、跳过/结束和敏感分支 | 明确机器身份；进行中对话不持久化；不调用外部模型；必须经现有校对流程才可保存。 |
 
 Web 模块目录约定见 [`apps/web/docs/README.md`](../apps/web/docs/README.md)，HTTP 契约见 [API.md](API.md)。
 
@@ -195,6 +196,16 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 默认右侧为采访者、左侧为被采访者；这是录入建议而非事实，必须由用户确认。图片 Object URL 只用于当前组件预览，页面卸载或移除图片时释放。模型与运行时初始化失败时保留纯文本粘贴回退，不向服务端提交截图。
 
+### 自动采访
+
+```text
+知情说明 → 浏览器内固定提纲 → 普通话题最多一次规则追问
+  → 正常/主动结束 → 通过路由内存状态进入 RecordForm → 人工校对 → 保存 private 草稿
+  └─ 明确现实危险表达 → 停止采访并提示寻求现实帮助，不提供整理入口
+```
+
+`src/lib/automated-interview.ts` 是规则与状态迁移的唯一事实源，不访问网络、D1、账户或浏览器持久存储。`AutomatedInterviewPage` 只持有当前页面状态；刷新或离开会丢失对话。正常结束时，`interviewToDraft` 转换为现有 `RecordDraft`，由 `IngestionPage` 和 `RecordForm` 承接；该转换会拒绝进行中或因安全原因停止的状态。自动采访不会绕过现有创建、公开、版本与治理边界。
+
 ## 8. 权限矩阵
 
 | 能力 | 路人 | 成员 | 记录主人 | 馆长 |
@@ -221,6 +232,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 - 当前是单一生产环境，没有独立 staging Worker 或 staging D1。
 - 当前没有 MFA、验证码、人机挑战或外部告警系统。
 - 当前只有全站在线人数；没有匹配意愿、随机匹配、双盲采访房间或实时消息持久化。单一全局房间适合当前规模，接近单对象连接容量前必须改为分片房间与聚合计数。
+- 自动采访当前只有浏览器内确定性中文规则，没有会话恢复、远程 NLP、LLM、语义向量、医学或心理风险判断。关键词分支只用于控制是否继续提问，不构成诊断；现实危险提示不能替代当地专业支持。
 - OCR 首次使用按需下载 11,341,486 字节的本站 Worker、合计 6,318,080 字节的两个模型、约 16KB ONNX Runtime 子模块和 4,732,028 字节 WASM；上游压缩或缓存行为可能改变传输耗时。弱网或低内存设备可能较慢。当前不提供服务端 OCR 后备，以避免上传私密截图和扩展现有单 Worker 基础设施。
 - 馆长角色由 `SUPERADMIN_EMAILS` 在注册时决定；修改该 Secret 不会自动改变已存在账户角色。
 - 过期会话、邮件动作和限流桶没有定时任务；按[运维手册](OPERATIONS.md)执行周期清理。
