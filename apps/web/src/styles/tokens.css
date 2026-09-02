@@ -1,11 +1,11 @@
 /* Primitive tokens */
 :root {
-  --primitive-paper-0: #ffffff;
-  --primitive-paper-50: #fbf9f6;
-  --primitive-paper-100: #f5f3f0;
-  --primitive-paper-200: #efeeeb;
-  --primitive-paper-300: #e4e2df;
-  --primitive-sand-300: #ccc6bd;
+  --primitive-paper-0: #f7f3e8;
+  --primitive-paper-50: #f0ebdc;
+  --primitive-paper-100: #e9e2d0;
+  --primitive-paper-200: #e1d8c2;
+  --primitive-paper-300: #d5cab0;
+  --primitive-sand-300: #c5b99f;
   --primitive-sand-500: #7b766f;
   --primitive-ink-950: #1b1c1a;
   --primitive-ink-800: #30312f;
@@ -62,6 +62,10 @@
   --status-error: var(--primitive-error-700);
   --status-error-surface: var(--primitive-error-100);
   --focus-ring: var(--primitive-cinnabar-700);
+  --texture-grain: rgb(92 75 47 / 0.065);
+  --texture-fleck: rgb(122 100 63 / 0.05);
+  --texture-fiber: rgb(105 86 54 / 0.055);
+  --texture-fiber-light: rgb(255 255 255 / 0.24);
 }
 
 [data-theme="night"] {
@@ -83,6 +87,10 @@
   --status-error: #ffb4ab;
   --status-error-surface: #5f1719;
   --focus-ring: #e5857f;
+  --texture-grain: rgb(74 70 64 / 0.035);
+  --texture-fleck: transparent;
+  --texture-fiber: transparent;
+  --texture-fiber-light: transparent;
 }
 
 /* Component tokens */

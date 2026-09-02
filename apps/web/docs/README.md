@@ -5,6 +5,7 @@
 ## 目录
 
 - `src/`：浏览器端 React 应用。
+- `src/styles/`：三层主题 Token 与全局样式；默认亮色画布以纯 CSS 生成草纱纸米色和低对比纤维质感，夜间主题使用独立纹理变量，不依赖图片资源。
 - `worker/`：Worker 入口、业务模块、在线房间、安全边界与 SMTP。
 - `migrations/`：D1 的顺序迁移文件；当前采访正文保存为 `interview_messages` 双角色纯文本消息，已经发布的迁移不得改写。
 - `public/`：Workers Assets 的 `_headers` 等公开资源；构建前从锁定依赖生成的 `public/vendor/` 被 Git 忽略并由 Vite 复制到产物。页面 CSP 与 OCR Worker CSP 在 `_headers` 中分开定义。
