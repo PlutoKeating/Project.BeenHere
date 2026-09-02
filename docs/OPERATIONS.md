@@ -166,6 +166,14 @@ npx wrangler d1 execute beenhere-records --remote --command \
 
 ## 9. 周期性数据维护
 
+标题算法升级属于受控数据维护。先发布包含新算法的 Worker，再运行只读预览：
+
+```bash
+npm run titles:backfill:remote --workspace @beenhere/web
+```
+
+确认变化数量和公开标题后，使用 `-- --apply`。脚本会在写入前打印 D1 Time Travel bookmark、对每条旧标题执行条件更新、写入 `record.title_rebuilt` 审计，并在结束时重新验证；非公开标题始终脱敏。若条件更新因并发编辑未生效，验证会失败，必须重新预览，不能覆盖用户的新版本。
+
 当前没有 Cron 清理。建议每月检查行数；需要清理时先取 bookmark，再执行：
 
 ```sql

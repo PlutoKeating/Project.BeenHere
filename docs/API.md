@@ -131,7 +131,7 @@
 
 `ingestionMethod` 仅允许可选值 `automated_interview`；普通 OCR/纯文本录入省略该字段。自动采访创建时当前账户会以 `claimed` 而非 `uploader` 成为记录主人；后续更新不得移除该标记、修改 `conductedAt`，或修改、删除、新增采访者消息，Worker 会比较上一版 D1 快照并返回 `400 automated_interview_immutable`。被采访者自己的消息仍可修改或删除。
 
-消息数组限制为 2–100 条，单条正文去除首尾空白后为 1–8000 字符，只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。被采访者显示名为 1–80 字符，平台名最多 80 字符，`conductedAt` 必须是带时区偏移的 ISO datetime，`canonicalUrl` 只接受 HTTP(S) URL。标题、摘要和人物 slug 由 Worker 派生。录入来源只使用 `douyin|social_media|in_person|direct|other`。
+消息数组限制为 2–100 条，单条正文去除首尾空白后为 1–8000 字符，只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。被采访者显示名为 1–80 字符，平台名最多 80 字符，`conductedAt` 必须是带时区偏移的 ISO datetime，`canonicalUrl` 只接受 HTTP(S) URL。标题、摘要和人物 slug 由 Worker 派生。标题只读取全部 `participant` 消息，以跨消息关键词权重选择代表性语句、去除口语前缀并截为最多 48 个 Unicode 字符；没有足够内容时回退为“与{显示名}的一次采访”。摘要仍取第一条被采访者消息的前 300 字符。录入来源只使用 `douyin|social_media|in_person|direct|other`。
 
 浏览器 OCR 的 5 张、15 MB、4000 万像素限制是前端临时输入约束，不是 API 字段。服务端从不接收截图，也不信任前端置信度或坐标；无论消息来自 OCR、纯文本还是未来实时采访，都必须通过同一个 `draftSchema`。
 

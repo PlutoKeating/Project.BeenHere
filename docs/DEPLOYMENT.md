@@ -181,6 +181,20 @@ cd apps/web
 npx wrangler d1 migrations list beenhere-records --remote
 ```
 
+### 标题数据回填
+
+标题算法升级不修改 schema，也不改写 `published_editions.snapshot`。发布新 Worker 后，先只读预览，再在确认结果和恢复点后显式应用：
+
+```bash
+# 只读取规范快照并显示变化数量；非公开标题不会输出
+npm run titles:backfill:remote --workspace @beenhere/web
+
+# 获取并打印写入前 bookmark，逐条 CAS 更新根记录标题并写 audit_events
+npm run titles:backfill:remote --workspace @beenhere/web -- --apply
+```
+
+有当前公开版本的记录以 `current_edition_id` 对应快照为准；尚未公开的记录以当前草稿为准。脚本完成后会重新读取全部记录并用同一 `deriveInterviewTitle` 验证没有旧标题。发生异常时保留脚本输出的 bookmark，按运维手册评估 Time Travel；不得直接改写不可变公开版本。
+
 ## 7. 首次或重建环境
 
 以下步骤只用于明确授权的新环境或灾难重建，不用于日常发布：

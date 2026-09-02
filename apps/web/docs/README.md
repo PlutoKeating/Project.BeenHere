@@ -30,4 +30,6 @@ npm run prepare:ocr
 
 `npm run deploy` 直接面向 `wrangler.jsonc` 中的现有生产 Worker/custom domain，不是本地预览命令；只在完成生产授权、D1 recovery bookmark 与全量门禁后使用。日常发布仍以根文档规定的 GitHub Actions 链路为准。
 
+采访标题由 `worker/domain.ts` 从全部被采访者消息确定性派生。`npm run titles:backfill:remote` 只读预览生产旧标题回填；显式追加 `-- --apply` 才会在打印 D1 Time Travel bookmark 后更新根记录标题并写审计。脚本对非公开标题做脱敏，且不会改写公开版本快照。
+
 完整信息以仓库根部的[技术架构](../../../docs/ARCHITECTURE.md)、[API](../../../docs/API.md)、[部署](../../../docs/DEPLOYMENT.md)和[运维手册](../../../docs/OPERATIONS.md)为准。

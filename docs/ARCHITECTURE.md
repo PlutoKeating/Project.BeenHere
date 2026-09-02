@@ -98,6 +98,7 @@ sequenceDiagram
 | `PresenceRoom` | 连接、按访客去重、人数广播 | 只保留活动 WebSocket 附件；不持久化浏览历史、IP 或采访内容。 |
 | `ScreenshotRecognition` | 截图校验、OCR、布局解析、双角色消息导入 | 原图不上传或持久化；临时置信度不进入正式草稿；最多导入 100 条消息。 |
 | `AutomatedInterview` | 固定提纲、ELIZA 式 rank/分解/重组、跳过/结束和敏感分支 | 明确机器身份；进行中对话不持久化；不调用外部模型；必须经现有校对流程才可保存。 |
+| `InterviewTitleDerivation` | 对全部 participant 消息做本地关键词排序、语句分解和标题重组 | 不读取 interviewer 消息、不调用外部服务；结果最多 48 个 Unicode 字符。 |
 
 Web 模块目录约定见 [`apps/web/docs/README.md`](../apps/web/docs/README.md)，HTTP 契约见 [API.md](API.md)。
 
@@ -128,7 +129,7 @@ erDiagram
 ### 采访记录域
 
 - `people`：被采访者公开身份，支持实名、化名、匿名；公开路径由系统生成。
-- `interview_records`：记录根实体、公开编号、visibility、当前公开版本、软删除信息，以及从消息派生的标题和摘要。
+- `interview_records`：记录根实体、公开编号、visibility、当前公开版本、软删除信息，以及从消息派生的标题和摘要。标题只根据全部被采访者消息生成；摘要仍取首条被采访者消息。
 - `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。
 - `record_drafts`：当前精简 JSON 草稿和递增 revision，用于乐观并发控制；草稿包含 participant、conductedAt、messages、source，以及自动采访草稿才有的可选 `ingestionMethod`。
 - `published_editions`：不可变 JSON 快照、版本号、变更说明和 SHA-256 内容摘要。

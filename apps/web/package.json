@@ -17,7 +17,8 @@
     "deploy": "npm run build && wrangler deploy",
     "cf:typegen": "wrangler types worker/env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply beenhere-records --local",
-    "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote",
+    "titles:backfill:remote": "node --experimental-strip-types scripts/backfill-record-titles.mjs"
   },
   "dependencies": {
     "@paddleocr/paddleocr-js": "0.4.2",

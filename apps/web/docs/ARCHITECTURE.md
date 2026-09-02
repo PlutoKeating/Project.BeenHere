@@ -57,7 +57,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 | `worker/record-repository.ts` | 只读公开查询；只返回 `public` 或明确的 `unlisted` 记录。 |
 | `worker/record-management.ts` | 所有权、修订、公开版本、软删除、认领和审计。 |
 | `worker/governance.ts` | 公开更正/撤回请求和小时级限流。 |
-| `worker/domain.ts` | 无基础设施依赖的领域格式与规范化函数。 |
+| `worker/domain.ts` | 无基础设施依赖的领域格式、采访标题 NLP 派生与规范化函数。 |
 | `worker/presence.ts` | 同源 WebSocket 入口与全局 Durable Object；访客去重和人数广播。 |
 
 ## 持久化
@@ -73,6 +73,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 - 新公开查询进入 `RecordRepository`，不绕过 visibility 条件。
 - 新写操作进入 `RecordManagementModule`，必须先检查记录主人或馆长权限并写审计事件。
 - 新录入方式转换为同一个 `RecordDraft`，不新增兼容版采访记录定义。
+- 标题只能由 `worker/domain.ts` 根据全部 participant 消息派生；沿用关键词 rank、语句 decomposition 与标题 reassembly，不把 interviewer 开场白当标题，不在浏览器和维护脚本复制另一套算法。
 - 自动采访规则必须保持机器身份透明、可跳过/结束、普通话题最多一次追问；敏感分支不得被表现层绕过，进行中内容不得在未新增明确同意机制前持久化。
 - `automated_interview` 草稿创建时当前账户必须写为 `claimed`；更新必须在 Worker 中锁定录入标记、采访时间和采访者消息，不能只依赖前端 disabled/readOnly。
 - OCR 坐标、置信度、截图文件和预览 URL 都是浏览器临时状态；提交前必须剥离，只保留 `speakerRole` 与 `body`。

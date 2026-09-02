@@ -29,12 +29,12 @@ describe("text interview presentation", () => {
         { speakerRole: "participant", body: "只是想换一种生活。" },
       ],
       source: { sourceType: "douyin", platformName: "抖音" },
-    })).toEqual({ title: "你为什么来到这里？", excerpt: "只是想换一种生活。" });
+    })).toEqual({ title: "只是想换一种生活", excerpt: "只是想换一种生活。" });
   });
 
   it("keeps derived public text within storage limits", () => {
     const longQuestion = "问".repeat(200);
-    const longAnswer = "答".repeat(400);
+    const longAnswer = "这是一个很长的回答".repeat(50);
     const result = deriveRecordPresentation({
       participant: { displayName: "匿名", identityMode: "anonymous" },
       conductedAt: "2026-09-01T00:00:00.000Z",
@@ -44,8 +44,38 @@ describe("text interview presentation", () => {
       ],
       source: { sourceType: "social_media" },
     });
-    expect(result.title).toHaveLength(120);
+    expect(result.title).toHaveLength(48);
     expect(result.excerpt).toHaveLength(300);
+  });
+
+  it("summarizes the recurring theme across all participant messages", () => {
+    const result = deriveRecordPresentation({
+      participant: { displayName: "小林", identityMode: "pseudonym" },
+      conductedAt: "2026-09-02T00:00:00.000Z",
+      messages: [
+        { speakerRole: "interviewer", body: "你好，我是自动采访程序。" },
+        { speakerRole: "participant", body: "还行，忙得要命，但是很开心。" },
+        { speakerRole: "participant", body: "我们会一起创造伟大的事业。" },
+        { speakerRole: "participant", body: "虽然路上很久，我真的要创造伟大的事业！" },
+      ],
+      source: { sourceType: "direct", platformName: "来过 · 自动采访" },
+    });
+
+    expect(result.title).toBe("一起创造伟大的事业");
+    expect(result.title).not.toContain("自动采访程序");
+  });
+
+  it("falls back to a neutral title for low-information utterances", () => {
+    const result = deriveRecordPresentation({
+      participant: { displayName: "小林", identityMode: "pseudonym" },
+      conductedAt: "2026-09-02T00:00:00.000Z",
+      messages: [
+        { speakerRole: "interviewer", body: "我们开始吧。" },
+        { speakerRole: "participant", body: "咳咳" },
+      ],
+      source: { sourceType: "direct" },
+    });
+    expect(result.title).toBe("与小林的一次采访");
   });
 });
 
