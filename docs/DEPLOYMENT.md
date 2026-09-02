@@ -189,11 +189,11 @@ npx wrangler d1 migrations list beenhere-records --remote
 # 只读取规范快照并显示变化数量；非公开标题不会输出
 npm run titles:backfill:remote --workspace @beenhere/web
 
-# 获取并打印写入前 bookmark，逐条 CAS 更新根记录标题并写 audit_events
+# 0003 已部署后：获取并打印写入前 bookmark，逐条 CAS 更新根标题；数据库触发器原子写 audit_events
 npm run titles:backfill:remote --workspace @beenhere/web -- --apply
 ```
 
-有当前公开版本的记录以 `current_edition_id` 对应快照为准；尚未公开的记录以当前草稿为准。脚本完成后会重新读取全部记录并用同一 `deriveInterviewTitle` 验证没有旧标题。发生异常时保留脚本输出的 bookmark，按运维手册评估 Time Travel；不得直接改写不可变公开版本。
+有当前公开版本的记录以 `current_edition_id` 对应快照为准；尚未公开的记录以当前草稿为准。应用前脚本会确认 0003 标题审计触发器存在；每个 UPDATE 与其审计由 SQLite 原子提交。脚本完成后会重新读取全部记录并用同一 `deriveInterviewTitle` 验证没有旧标题。发生异常时保留脚本输出的 bookmark，按运维手册评估 Time Travel；不得直接改写不可变公开版本。
 
 ## 7. 首次或重建环境
 

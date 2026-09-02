@@ -77,6 +77,48 @@ describe("text interview presentation", () => {
     });
     expect(result.title).toBe("与小林的一次采访");
   });
+
+  it("uses ranked theme cues instead of an unrelated closing phrase", () => {
+    const result = deriveRecordPresentation({
+      participant: { displayName: "小林", identityMode: "pseudonym" },
+      conductedAt: "2026-09-02T00:00:00.000Z",
+      messages: [
+        { speakerRole: "interviewer", body: "最近在做什么？" },
+        { speakerRole: "participant", body: "我喜欢音乐，也一直在学吉他。" },
+        { speakerRole: "participant", body: "最后说声再见。" },
+      ],
+      source: { sourceType: "direct" },
+    });
+    expect(result.title).toBe("喜欢音乐");
+  });
+
+  it("samples the middle of long answers and supports Latin key phrases", () => {
+    const result = deriveRecordPresentation({
+      participant: { displayName: "Lin", identityMode: "pseudonym" },
+      conductedAt: "2026-09-02T00:00:00.000Z",
+      messages: [
+        { speakerRole: "interviewer", body: "What matters to you?" },
+        { speakerRole: "participant", body: "one. two. three. four. Community gardens bring us together. six. seven. eight. nine. ten." },
+        { speakerRole: "participant", body: "I keep returning to community gardens." },
+        { speakerRole: "participant", body: "That is all for today." },
+      ],
+      source: { sourceType: "direct" },
+    });
+    expect(result.title.toLowerCase()).toContain("community gardens");
+  });
+
+  it("treats routine acknowledgements as low-information", () => {
+    const result = deriveRecordPresentation({
+      participant: { displayName: "小林", identityMode: "pseudonym" },
+      conductedAt: "2026-09-02T00:00:00.000Z",
+      messages: [
+        { speakerRole: "interviewer", body: "准备好了吗？" },
+        { speakerRole: "participant", body: "好的" },
+      ],
+      source: { sourceType: "direct" },
+    });
+    expect(result.title).toBe("与小林的一次采访");
+  });
 });
 
 describe("automated interview provenance", () => {

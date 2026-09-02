@@ -64,7 +64,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 
 `migrations/*.sql` 是 D1 schema 的唯一来源。当前 binding 名为 `DB`，数据库名为 `beenhere-records`。`record_drafts.snapshot` 与 `published_editions.snapshot` 保存完整 `RecordDraft` JSON；公开版本不可变，当前版本通过 `interview_records.current_edition_id` 指向。
 
-生产已应用 `0001_initial.sql` 与 `0002_simplify_interview_messages.sql`。当前正文表只有 `interview_messages`；`conversation_units`、`topics`、`record_topics` 已由 0002 删除，不得继续作为当前接口或扩展点。
+生产按顺序应用 `0001_initial.sql`、`0002_simplify_interview_messages.sql` 与 `0003_audit_derived_title_updates.sql`。当前正文表只有 `interview_messages`；旧正文/话题表已由 0002 删除。0003 的标题审计触发器使根记录标题更新与 `record.title_rebuilt` 审计原子提交。
 
 实时状态不进入 D1。`PRESENCE` binding 始终指向一个名为 `global` 的 SQLite-backed `PresenceRoom`；WebSocket attachment 只保存随机 visitor UUID，以便 Durable Object 休眠后恢复去重计数。
 
@@ -72,6 +72,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 
 - 新公开查询进入 `RecordRepository`，不绕过 visibility 条件。
 - 新写操作进入 `RecordManagementModule`，必须先检查记录主人或馆长权限并写审计事件。
+- 受控生产数据回填不是应用写接口；只允许仓库内有 dry-run、显式 apply、恢复点、CAS、原子审计和事后验证的维护脚本通过 Cloudflare 运维身份执行。
 - 新录入方式转换为同一个 `RecordDraft`，不新增兼容版采访记录定义。
 - 标题只能由 `worker/domain.ts` 根据全部 participant 消息派生；沿用关键词 rank、语句 decomposition 与标题 reassembly，不把 interviewer 开场白当标题，不在浏览器和维护脚本复制另一套算法。
 - 自动采访规则必须保持机器身份透明、可跳过/结束、普通话题最多一次追问；敏感分支不得被表现层绕过，进行中内容不得在未新增明确同意机制前持久化。

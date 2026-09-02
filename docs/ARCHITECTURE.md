@@ -143,7 +143,7 @@ erDiagram
 - `audit_events`：采访记录关键写操作的操作者、理由与目标。
 - `public_request_limits`：公众更正接口的一小时计数桶。
 
-生产 D1 已应用 `0001_initial.sql` 与 `0002_simplify_interview_messages.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除 `conversation_units`、`topics`、`record_topics`；这些旧表不是当前模型的一部分。Cloudflare 内部表不属于应用 schema。
+生产 D1 按顺序应用 `0001_initial.sql`、`0002_simplify_interview_messages.sql` 与 `0003_audit_derived_title_updates.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除旧表；第三个迁移用数据库触发器保证任何根记录标题变化与 `record.title_rebuilt` 审计处于同一个 SQLite 事务。Cloudflare 内部表不属于应用 schema。
 
 数据库定义只来自顺序迁移。已在生产应用的迁移不得修改；新增 schema 必须增加新的编号文件。
 
@@ -226,6 +226,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 ## 9. 一致性与失败策略
 
 - 相关 D1 写入使用 `DB.batch()`，失败时整批回滚。
+- 正常运行时写入都经过 Worker 业务模块；仓库维护的生产回填脚本是唯一例外，依赖 Cloudflare 运维凭据、显式 `--apply`、Time Travel bookmark、CAS 条件与数据库触发器审计，不形成公共 HTTP 能力。
 - 草稿更新依赖 `expectedRevision`；冲突返回 409，客户端必须重新加载，不能静默覆盖。
 - SMTP 发送失败时撤销新建的一次性令牌；注册账户可保持 pending 并重新注册触发新邮件。
 - OCR 初始化或推理失败只影响当前浏览器的辅助录入；界面提供重试与纯文本回退，正式采访数据和 D1 不受影响。

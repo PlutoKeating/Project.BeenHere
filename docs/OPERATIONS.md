@@ -172,7 +172,7 @@ npx wrangler d1 execute beenhere-records --remote --command \
 npm run titles:backfill:remote --workspace @beenhere/web
 ```
 
-确认变化数量和公开标题后，使用 `-- --apply`。脚本会在写入前打印 D1 Time Travel bookmark、对每条旧标题执行条件更新、写入 `record.title_rebuilt` 审计，并在结束时重新验证；非公开标题始终脱敏。若条件更新因并发编辑未生效，验证会失败，必须重新预览，不能覆盖用户的新版本。
+确认 0003 迁移已经应用、变化数量和公开标题后，使用 `-- --apply`。脚本会在写入前打印 D1 Time Travel bookmark，并对每条旧标题执行条件更新；数据库触发器在同一事务写入 `record.title_rebuilt` 审计。脚本结束时重新验证，且非公开标题始终脱敏。若条件更新因并发编辑未生效，验证会失败，必须重新预览，不能覆盖用户的新版本。
 
 当前没有 Cron 清理。建议每月检查行数；需要清理时先取 bookmark，再执行：
 

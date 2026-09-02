@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -46,18 +45,17 @@ for (const proposal of proposals) {
 
 if (!apply || proposals.length === 0) process.exit(0);
 
+const triggerCheck = runWrangler(["d1", "execute", database, "--remote", "--json", "--command", "SELECT 1 AS ok FROM sqlite_master WHERE type = 'trigger' AND name = 'audit_interview_record_title_updates'"]);
+if (triggerCheck[0]?.results?.[0]?.ok !== 1) throw new Error("Title audit trigger is missing. Deploy migration 0003 before applying the backfill.");
+
 const recovery = runWrangler(["d1", "time-travel", "info", database, "--json"]);
 console.log(`Recovery bookmark before write: ${recovery.bookmark}`);
 
 for (const proposal of proposals) {
-  const auditId = `audit-${randomUUID()}`;
   const command = `UPDATE interview_records SET title = ${sql(proposal.nextTitle)}
     WHERE id = ${sql(proposal.id)} AND title = ${sql(proposal.title)}
       AND COALESCE(current_edition_id, '') = ${sql(proposal.current_edition_id ?? "")}
-      AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ${sql(proposal.id)} AND revision = ${Number(proposal.revision)});
-    INSERT INTO audit_events (id, actor_account_id, actor_label, action, target_type, target_id, reason, created_at)
-    SELECT ${sql(auditId)}, NULL, 'system:title-backfill-v1', 'record.title_rebuilt', 'interview_record', ${sql(proposal.id)}, '按全部被采访者消息重建标题', CURRENT_TIMESTAMP
-    WHERE changes() = 1;`;
+      AND EXISTS (SELECT 1 FROM record_drafts WHERE record_id = ${sql(proposal.id)} AND revision = ${Number(proposal.revision)});`;
   runWrangler(["d1", "execute", database, "--remote", "--json", "--command", command]);
 }
 
