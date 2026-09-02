@@ -156,3 +156,10 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 5. 验证生产健康、登录、邮件和关键数据；记录根因与预防措施。
 
 具体命令见 [OPERATIONS.md](OPERATIONS.md)。
+
+## 15. 开源许可与公开仓库
+
+- 项目代码采用 `AGPL-3.0-only`；根目录 [`LICENCE`](../LICENCE) 是许可证原文的唯一事实源，npm 根包与 Web workspace 使用相同 SPDX 标识。
+- 生产页面页脚提供公开源代码、许可证和无担保声明入口，网络用户可以直接取得当前公开仓库源码。
+- GitHub Secret Scanning 与 Push Protection 当前已启用，但不能替代提交前检查；真实 Secret、`.dev.vars`、恢复产物和用户数据仍不得进入 Git 历史。
+- 2026-09-02 的基线审计覆盖当时全部 36 个可达提交，高置信凭据模式与开放 Secret/Dependabot 告警均为 0；这是时间点证据，不保证未来提交自动安全。

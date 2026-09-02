@@ -58,7 +58,7 @@ export function AppShell() {
       </nav>}
     </header>
     <main><Outlet/></main>
-    <footer className="mt-24 border-t border-line"><div className="page-shell grid gap-8 py-12 tablet:grid-cols-2"><div><p className="font-serif text-lg font-semibold">Project.BeenHere · 来过</p><p className="mt-2 text-xs leading-6 text-ink-muted">认真保存陌生人之间真实发生的采访记录。</p></div><div className="flex flex-wrap gap-5 text-sm tablet:justify-end"><NavLink to="/records">全部记录</NavLink><NavLink to="/corrections">更正与撤回</NavLink><AccountLink>账户中心</AccountLink></div></div></footer>
+    <footer className="mt-24 border-t border-line"><div className="page-shell grid gap-8 py-12 tablet:grid-cols-2"><div><p className="font-serif text-lg font-semibold">Project.BeenHere · 来过</p><p className="mt-2 text-xs leading-6 text-ink-muted">认真保存陌生人之间真实发生的采访记录。</p><p className="mt-3 text-xs leading-6 text-ink-muted"><a href="https://github.com/PlutoKeating/Project.BeenHere" target="_blank" rel="noreferrer">开放源代码</a> · <a href="https://github.com/PlutoKeating/Project.BeenHere/blob/main/LICENCE" target="_blank" rel="noreferrer">AGPLv3</a> · 本软件不提供任何担保。</p></div><div className="flex flex-wrap gap-5 text-sm tablet:justify-end"><NavLink to="/records">全部记录</NavLink><NavLink to="/corrections">更正与撤回</NavLink><AccountLink>账户中心</AccountLink></div></div></footer>
     <MobileTabBar/>
   </div>;
 }

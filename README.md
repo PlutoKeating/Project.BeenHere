@@ -38,7 +38,7 @@
 <details>
 <summary>为建设者准备的文档</summary>
 
-[技术架构](docs/ARCHITECTURE.md) · [本地启动](docs/QUICK_START.md) · [API](docs/API.md) · [部署](docs/DEPLOYMENT.md) · [运维](docs/OPERATIONS.md) · [安全](docs/SECURITY.md)
+[技术架构](docs/ARCHITECTURE.md) · [本地启动](docs/QUICK_START.md) · [API](docs/API.md) · [部署](docs/DEPLOYMENT.md) · [运维](docs/OPERATIONS.md) · [安全](docs/SECURITY.md) · [AGPLv3](LICENCE)
 
 </details>
 

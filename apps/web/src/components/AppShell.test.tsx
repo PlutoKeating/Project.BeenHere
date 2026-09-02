@@ -22,4 +22,11 @@ describe("mobile navigation", () => {
     expect(accountLinks.length).toBeGreaterThan(0);
     expect(accountLinks.every((tag) => !tag.includes('data-navigation="document"'))).toBe(true);
   });
+
+  it("exposes source, license, and warranty notices", () => {
+    const markup = renderShell();
+    expect(markup).toContain("https://github.com/PlutoKeating/Project.BeenHere");
+    expect(markup).toContain("AGPLv3");
+    expect(markup).toContain("本软件不提供任何担保");
+  });
 });
