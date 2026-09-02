@@ -42,6 +42,7 @@ export interface InterviewMessage {
 }
 
 export interface RecordDraft {
+  ingestionMethod?: "automated_interview";
   participant: {
     displayName: string;
     identityMode: "real_name" | "pseudonym" | "anonymous";

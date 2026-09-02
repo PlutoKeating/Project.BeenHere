@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { deriveRecordPresentation, formatRecordNumber, normalizeExclusions } from "./domain";
+import { automatedInterviewUpdateError, deriveRecordPresentation, formatRecordNumber, normalizeExclusions, ownershipKindForDraft } from "./domain";
+import type { RecordDraft } from "./types";
 
 describe("record numbering", () => {
   it("formats a stable six-digit public number", () => {
@@ -45,5 +46,33 @@ describe("text interview presentation", () => {
     });
     expect(result.title).toHaveLength(120);
     expect(result.excerpt).toHaveLength(300);
+  });
+});
+
+describe("automated interview provenance", () => {
+  const automatedDraft: RecordDraft = {
+    ingestionMethod: "automated_interview",
+    participant: { displayName: "小林", identityMode: "pseudonym" },
+    conductedAt: "2026-09-02T08:00:00.000Z",
+    messages: [
+      { speakerRole: "interviewer", body: "你最近怎么样？" },
+      { speakerRole: "participant", body: "正在慢慢来。" },
+    ],
+    source: { sourceType: "direct", platformName: "来过 · 自动采访" },
+  };
+
+  it("claims the current account as the participant owner", () => {
+    expect(ownershipKindForDraft(automatedDraft)).toBe("claimed");
+    expect(ownershipKindForDraft({ ...automatedDraft, ingestionMethod: undefined })).toBe("uploader");
+  });
+
+  it("locks automatic questions and the interview start time", () => {
+    expect(automatedInterviewUpdateError(automatedDraft, { ...automatedDraft, conductedAt: "2026-09-03T08:00:00.000Z" })).toContain("开始时间");
+    expect(automatedInterviewUpdateError(automatedDraft, { ...automatedDraft, messages: [{ speakerRole: "interviewer", body: "改过的问题" }, automatedDraft.messages[1]!] })).toContain("提问");
+    expect(automatedInterviewUpdateError(automatedDraft, { ...automatedDraft, ingestionMethod: undefined })).toContain("录入标记");
+  });
+
+  it("still lets the participant revise their own words", () => {
+    expect(automatedInterviewUpdateError(automatedDraft, { ...automatedDraft, messages: [automatedDraft.messages[0]!, { speakerRole: "participant", body: "我想换一种说法。" }] })).toBeNull();
   });
 });

@@ -23,7 +23,7 @@ export function AuthPage({mode}:{mode:Mode}) {
     const form=event.currentTarget,data=new FormData(form),email=String(data.get("email")??""),password=String(data.get("password")??"");
     try{
       if(mode==="login"){await api.login(email,password);const next=params.get("next");navigate(next?.startsWith("/")&&!next.startsWith("//")?next:"/studio",{replace:true});}
-      if(mode==="register"){const result=await api.register({email,displayName:String(data.get("displayName")??""),password});form.reset();setMessage(result.message);}
+      if(mode==="register"){if(data.get("legalAccepted")!=="yes")throw new Error("请先阅读并同意条款与条件和隐私政策。");const result=await api.register({email,displayName:String(data.get("displayName")??""),password});form.reset();setMessage(result.message);}
       if(mode==="forgot"){const result=await api.forgotPassword(email);setMessage(result.message);}
       if(mode==="reset"){await api.resetPassword(token,password);navigate("/studio",{replace:true});}
     }catch(cause){setError(cause instanceof Error?cause.message:"暂时无法完成请求。");}finally{setBusy(false);}
@@ -43,6 +43,7 @@ export function AuthPage({mode}:{mode:Mode}) {
         {(mode==="login"||mode==="register"||mode==="forgot")&&<label><span className="field-label">邮箱</span><div className="flex items-center gap-2"><Mail size={17}/><input className="field" name="email" type="email" autoComplete="email" required/></div></label>}
         {mode==="register"&&<label><span className="field-label">用户名</span><div className="flex items-center gap-2"><UserRound size={17}/><input className="field" name="displayName" minLength={2} maxLength={40} autoComplete="nickname" required/></div></label>}
         {(mode==="login"||mode==="register"||mode==="reset")&&<label><span className="field-label">{mode==="reset"?"新密码":"密码"}</span><div className="flex items-center gap-2"><KeyRound size={17}/><input className="field" name="password" type="password" minLength={mode==="login"?1:12} maxLength={128} autoComplete={mode==="login"?"current-password":"new-password"} required/></div>{mode!=="login"&&<small className="mt-2 block text-xs text-ink-muted">至少 12 个字符</small>}</label>}
+        {mode==="register"&&<label className="flex cursor-pointer items-start gap-3 text-sm leading-6 text-ink-muted"><input className="mt-1 size-4 shrink-0 accent-[var(--accent-seal)]" name="legalAccepted" type="checkbox" value="yes" required/><span>我已阅读并同意<Link className="text-blueprint underline" to="/terms">条款与条件</Link>和<Link className="text-blueprint underline" to="/privacy">隐私政策</Link>。</span></label>}
         <button className="button-primary w-full" disabled={busy}>{busy?"请稍候…":mode==="login"?"登录":mode==="register"?"注册并发送验证邮件":mode==="forgot"?"发送重设邮件":"保存新密码"}<ArrowRight size={16}/></button>
       </form>}
       {error&&<p className="mt-5 border border-danger/30 bg-danger-surface p-3 text-sm text-danger" role="alert">{error}</p>}

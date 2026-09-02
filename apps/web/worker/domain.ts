@@ -19,3 +19,20 @@ export function deriveRecordPresentation(draft: RecordDraft): { title: string; e
     excerpt: (answer || draft.messages[0]?.body.trim() || "一段采访对话").slice(0, 300),
   };
 }
+
+export function ownershipKindForDraft(draft: RecordDraft): "claimed" | "uploader" {
+  return draft.ingestionMethod === "automated_interview" ? "claimed" : "uploader";
+}
+
+export function automatedInterviewUpdateError(previous: RecordDraft, next: RecordDraft): string | null {
+  if (previous.ingestionMethod !== "automated_interview") return null;
+  if (next.ingestionMethod !== "automated_interview") return "自动采访的录入标记不可移除。";
+  if (next.conductedAt !== previous.conductedAt) return "自动采访的开始时间不可修改。";
+  const interviewerBodies = (draft: RecordDraft) => draft.messages
+    .filter((message) => message.speakerRole === "interviewer")
+    .map((message) => message.body);
+  if (JSON.stringify(interviewerBodies(next)) !== JSON.stringify(interviewerBodies(previous))) {
+    return "自动采访者的提问不可修改、删除或新增。";
+  }
+  return null;
+}

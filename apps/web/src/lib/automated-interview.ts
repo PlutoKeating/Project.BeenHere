@@ -139,6 +139,7 @@ export function interviewToDraft(state: AutomatedInterviewState): RecordDraft {
   if (state.phase !== "complete") throw new Error("采访尚未结束，不能整理为记录。");
   if (state.completionReason === "safety") throw new Error("采访因安全原因停止，不能整理为记录。");
   return {
+    ingestionMethod: "automated_interview",
     participant: { displayName: "", identityMode: "pseudonym" },
     conductedAt: state.startedAt,
     messages: state.messages.map(({ speakerRole, body }) => ({ speakerRole, body })),

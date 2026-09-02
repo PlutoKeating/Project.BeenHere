@@ -37,7 +37,7 @@ export function MethodPage() {
         </div>
         <div className="border-l-2 border-seal pl-6">
           <h2 className="font-serif text-2xl font-semibold">AI 使用声明</h2>
-          <p className="mt-4 text-sm leading-8 text-ink-muted">OCR、转录与 AI 只能帮助录入。机器不能代表被采访者授权，不能自动认领，也不能替记录主人决定公开或删除。</p>
+          <p className="mt-4 text-sm leading-8 text-ink-muted">OCR 与转录只能帮助录入，不能代表被采访者授权或认领。自动采访是例外：它由当前登录者亲自完成，因此保存时直接认领为本人记录；采访时间与机器提问锁定，但机器仍不能替本人决定公开或删除。</p>
         </div>
         <Link to="/corrections" className="button-secondary w-full">提出更正、隐私或撤回请求</Link>
       </section>

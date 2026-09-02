@@ -1,4 +1,4 @@
-import { BookOpenText, Compass, Home, Menu, Search, UserRound, X } from "lucide-react";
+import { BookOpenText, Compass, Home, Info, Menu, ScrollText, Search, ShieldCheck, UserRound, X } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { ThemeToggle } from "./ThemeToggle";
@@ -17,7 +17,8 @@ function AccountLink({ className, children, onClick }: { className?: string; chi
 function DesktopNav() {
   return <nav className="hidden items-center gap-6 tablet:flex" aria-label="主导航">
     {navigation.map(({ to, label }) => <NavLink key={to} to={to} className={({ isActive }) => `record-label py-2 ${isActive ? "text-seal" : "text-ink-muted hover:text-ink"}`}>{label}</NavLink>)}
-    <NavLink to="/method" className={({ isActive }) => `record-label py-2 ${isActive ? "text-seal" : "text-ink-muted hover:text-ink"}`}>关于</NavLink>
+    <NavLink to="/method" className={({ isActive }) => `record-label py-2 ${isActive ? "text-seal" : "text-ink-muted hover:text-ink"}`}>方法</NavLink>
+    <NavLink to="/about" className={({ isActive }) => `record-label py-2 ${isActive ? "text-seal" : "text-ink-muted hover:text-ink"}`}>关于我们</NavLink>
   </nav>;
 }
 
@@ -52,13 +53,16 @@ export function AppShell() {
         </div>
       </div>
       {open && <nav className="border-t border-line bg-canvas px-5 py-4 tablet:hidden" aria-label="更多导航">
-        <NavLink to="/method" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><BookOpenText size={17}/>关于</NavLink>
+        <NavLink to="/about" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><Info size={17}/>关于我们</NavLink>
+        <NavLink to="/method" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><BookOpenText size={17}/>记录方法</NavLink>
+        <NavLink to="/privacy" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><ShieldCheck size={17}/>隐私政策</NavLink>
+        <NavLink to="/terms" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><ScrollText size={17}/>条款与条件</NavLink>
         <NavLink to="/corrections" onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><BookOpenText size={17}/>更正与撤回</NavLink>
         <AccountLink onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 border-b border-line/60 text-sm"><UserRound size={17}/>登录 / 我的记录</AccountLink>
       </nav>}
     </header>
     <main><Outlet/></main>
-    <footer className="mt-24 border-t border-line"><div className="page-shell grid gap-8 py-12 tablet:grid-cols-2"><div><p className="font-serif text-lg font-semibold">Project.BeenHere · 来过</p><p className="mt-2 text-xs leading-6 text-ink-muted">认真保存陌生人之间真实发生的采访记录。</p><p className="mt-3 text-xs leading-6 text-ink-muted"><a href="https://github.com/PlutoKeating/Project.BeenHere" target="_blank" rel="noreferrer">开放源代码</a> · <a href="https://github.com/PlutoKeating/Project.BeenHere/blob/main/LICENCE" target="_blank" rel="noreferrer">AGPLv3</a> · 本软件不提供任何担保。</p></div><div className="flex flex-wrap gap-5 text-sm tablet:justify-end"><NavLink to="/records">全部记录</NavLink><NavLink to="/corrections">更正与撤回</NavLink><AccountLink>账户中心</AccountLink></div></div></footer>
+    <footer className="mt-24 border-t border-line"><div className="page-shell grid gap-8 py-12 tablet:grid-cols-2"><div><p className="font-serif text-lg font-semibold">Project.BeenHere · 来过</p><p className="mt-2 text-xs leading-6 text-ink-muted">认真保存陌生人之间真实发生的采访记录。</p><p className="mt-3 text-xs leading-6 text-ink-muted"><a href="https://github.com/PlutoKeating/Project.BeenHere" target="_blank" rel="noreferrer">开放源代码</a> · <a href="https://github.com/PlutoKeating/Project.BeenHere/blob/main/LICENCE" target="_blank" rel="noreferrer">AGPLv3</a> · 本软件不提供任何担保。</p></div><nav aria-label="页脚导航" className="flex flex-wrap gap-5 text-sm tablet:justify-end"><NavLink to="/about">About Us</NavLink><NavLink to="/privacy">Privacy</NavLink><NavLink to="/terms">Terms &amp; Conditions</NavLink><NavLink to="/method">记录方法</NavLink><NavLink to="/corrections">更正与撤回</NavLink><AccountLink>账户中心</AccountLink></nav></div></footer>
     <MobileTabBar/>
   </div>;
 }

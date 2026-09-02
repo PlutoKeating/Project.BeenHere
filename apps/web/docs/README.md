@@ -24,7 +24,9 @@ npm run prepare:ocr
 
 `predev` 与 `prebuild` 会自动执行 `prepare:ocr`，从精确锁定的 PaddleOCR.js 0.4.2 包复制官方预构建浏览器 Worker。`deploy` 必须调用完整 `build`，不能直接绕开此生命周期。不得手工编辑或提交生成的 11,341,486 字节文件，也不得为 OCR 创建第二个 Cloudflare Worker 项目。
 
-登录成员还可从 `/studio/interview` 开始浏览器内自动采访。它由 `src/lib/automated-interview.ts` 的确定性规则驱动，不调用外部模型，也不持久化进行中内容；正常结束后只把可见双角色文本交给现有 `RecordForm` 校对并保存为未公开记录。
+登录成员还可从 `/studio/interview` 开始浏览器内自动采访。它由 `src/lib/automated-interview.ts` 的确定性规则驱动，不调用外部模型，也不持久化进行中内容；正常结束后只把可见双角色文本交给现有 `RecordForm`，保存为当前账户本人认领的未公开记录。采访开始时间与机器提问由前后端共同锁定，受访者自己的回答仍可编辑或删除。
+
+`/about`、`/privacy`、`/terms` 是公共信任页面；顶栏/移动更多菜单、页脚、注册页和自动采访知情说明提供入口。修改账户、内容公开、第三方资源或保留期限时必须同步这些页面。
 
 `npm run deploy` 直接面向 `wrangler.jsonc` 中的现有生产 Worker/custom domain，不是本地预览命令；只在完成生产授权、D1 recovery bookmark 与全量门禁后使用。日常发布仍以根文档规定的 GitHub Actions 链路为准。
 

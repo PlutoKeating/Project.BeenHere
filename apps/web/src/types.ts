@@ -7,6 +7,7 @@ export interface Account { id: string; email: string; displayName: string; role:
 export interface InterviewRecordSummary { id: string; recordNumber: string; title: string; excerpt: string; conductedAt: string; displayName: string; personSlug: string; identityMode: "real_name" | "pseudonym" | "anonymous" }
 export interface InterviewMessage { id?: string; speakerRole: SpeakerRole; body: string }
 export interface RecordDraft {
+  ingestionMethod?: "automated_interview";
   participant: { displayName: string; identityMode: "real_name" | "pseudonym" | "anonymous" };
   conductedAt: string;
   messages: InterviewMessage[];

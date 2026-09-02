@@ -103,7 +103,7 @@
 | 方法与路径 | 说明 |
 |---|---|
 | `GET /api/account/records` | 当前账户可管理的记录。 |
-| `POST /api/account/records` | 创建 private 草稿；当前账户成为 uploader。 |
+| `POST /api/account/records` | 创建 private 草稿；普通录入成为 uploader，自动采访成为 claimed 本人记录主人。 |
 | `GET /api/account/records/{id}` | 读取可编辑快照和 revision。 |
 | `PATCH /api/account/records/{id}` | `{ expectedRevision, draft }`；冲突返回 409。 |
 | `DELETE /api/account/records/{id}` | `{ reason }`；软删除并写审计。 |
@@ -118,6 +118,7 @@
 
 ```json
 {
+  "ingestionMethod": "automated_interview",
   "participant": { "displayName": "小林", "identityMode": "pseudonym" },
   "conductedAt": "2026-09-01T00:00:00.000Z",
   "messages": [
@@ -127,6 +128,8 @@
   "source": { "sourceType": "douyin", "platformName": "抖音", "canonicalUrl": "https://example.com/source" }
 }
 ```
+
+`ingestionMethod` 仅允许可选值 `automated_interview`；普通 OCR/纯文本录入省略该字段。自动采访创建时当前账户会以 `claimed` 而非 `uploader` 成为记录主人；后续更新不得移除该标记、修改 `conductedAt`，或修改、删除、新增采访者消息，Worker 会比较上一版 D1 快照并返回 `400 automated_interview_immutable`。被采访者自己的消息仍可修改或删除。
 
 消息数组限制为 2–100 条，单条正文去除首尾空白后为 1–8000 字符，只允许纯文本和 `interviewer|participant` 两种角色，且双方至少各有一条。被采访者显示名为 1–80 字符，平台名最多 80 字符，`conductedAt` 必须是带时区偏移的 ISO datetime，`canonicalUrl` 只接受 HTTP(S) URL。标题、摘要和人物 slug 由 Worker 派生。录入来源只使用 `douyin|social_media|in_person|direct|other`。
 

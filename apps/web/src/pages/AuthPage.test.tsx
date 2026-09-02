@@ -23,6 +23,7 @@ describe("registration success", () => {
     await act(async () => root.render(<MemoryRouter><AuthPage mode="register" /></MemoryRouter>));
     const values = { email: "reader@example.com", displayName: "记录者", password: "correct horse battery staple" };
     for (const [name, value] of Object.entries(values)) (container.querySelector(`[name=${name}]`) as HTMLInputElement).value = value;
+    (container.querySelector("[name=legalAccepted]") as HTMLInputElement).checked = true;
     await act(async () => {
       container.querySelector("form")!.dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
       await Promise.resolve();

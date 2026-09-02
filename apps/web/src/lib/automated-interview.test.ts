@@ -54,6 +54,7 @@ describe("automated interview", () => {
     const draft = interviewToDraft(answered);
 
     expect(draft.conductedAt).toBe("2026-09-02T08:00:00.000Z");
+    expect(draft.ingestionMethod).toBe("automated_interview");
     expect(draft.source).toEqual({ sourceType: "direct", platformName: "来过 · 自动采访" });
     expect(draft.participant).toEqual({ displayName: "", identityMode: "pseudonym" });
     expect(draft.messages).toEqual(answered.messages.map(({ speakerRole, body }) => ({ speakerRole, body })));

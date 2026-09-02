@@ -130,7 +130,7 @@ erDiagram
 - `people`：被采访者公开身份，支持实名、化名、匿名；公开路径由系统生成。
 - `interview_records`：记录根实体、公开编号、visibility、当前公开版本、软删除信息，以及从消息派生的标题和摘要。
 - `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。
-- `record_drafts`：当前精简 JSON 草稿和递增 revision，用于乐观并发控制；草稿只包含 participant、conductedAt、messages 与 source。
+- `record_drafts`：当前精简 JSON 草稿和递增 revision，用于乐观并发控制；草稿包含 participant、conductedAt、messages、source，以及自动采访草稿才有的可选 `ingestionMethod`。
 - `published_editions`：不可变 JSON 快照、版本号、变更说明和 SHA-256 内容摘要。
 - `interview_messages`：当前公开版本的有序纯文本消息，角色只允许 `interviewer|participant`。
 - `source_records`：抖音、其他社交媒体、线下、直接采访或其他来源。
@@ -204,7 +204,11 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
   └─ 明确现实危险表达 → 停止采访并提示寻求现实帮助，不提供整理入口
 ```
 
-`src/lib/automated-interview.ts` 是规则与状态迁移的唯一事实源，不访问网络、D1、账户或浏览器持久存储。`AutomatedInterviewPage` 只持有当前页面状态；刷新或离开会丢失对话。正常结束时，`interviewToDraft` 转换为现有 `RecordDraft`，由 `IngestionPage` 和 `RecordForm` 承接；该转换会拒绝进行中或因安全原因停止的状态。自动采访不会绕过现有创建、公开、版本与治理边界。
+`src/lib/automated-interview.ts` 是规则与状态迁移的唯一事实源，不访问网络、D1、账户或浏览器持久存储。`AutomatedInterviewPage` 只持有当前页面状态；刷新或离开会丢失对话。页面使用正常文档流作为唯一滚动区域，消息变化后滚到页面末端。正常结束时，`interviewToDraft` 转换为带 `ingestionMethod=automated_interview` 的现有 `RecordDraft`，由 `IngestionPage` 和 `RecordForm` 承接；该转换会拒绝进行中或因安全原因停止的状态。
+
+创建自动采访草稿时，`RecordManagementModule` 将当前账户写为 `ownership_kind=claimed`，表示登录者就是被采访者本人。更新时 Worker 会从 D1 读取上一版快照并强制保持采访开始时间、录入标记和全部采访者消息不变；前端只读控件不是这条不变量的授权边界。受访者自己的消息、显示名和身份呈现仍可修订。自动采访不会绕过现有公开、版本与治理边界。
+
+`/about`、`/privacy`、`/terms` 是无需登录的公共路由，由顶栏/移动更多导航、页脚、注册与自动采访知情说明链接进入。政策内容按当前 D1、Cookie、本地存储、Cloudflare、SMTP、Google Fonts 与浏览器 OCR 数据流陈述；改变数据处理或第三方依赖时必须同步这些页面。
 
 ## 8. 权限矩阵
 

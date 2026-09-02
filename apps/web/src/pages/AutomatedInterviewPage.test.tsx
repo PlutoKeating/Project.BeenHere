@@ -13,7 +13,8 @@ describe("automated interview page", () => {
       document: dom.window.document,
       IS_REACT_ACT_ENVIRONMENT: true,
     });
-    dom.window.HTMLElement.prototype.scrollIntoView = () => undefined;
+    const scrollCalls: ScrollIntoViewOptions[] = [];
+    dom.window.HTMLElement.prototype.scrollIntoView = (options) => { scrollCalls.push(options as ScrollIntoViewOptions); };
     const container = dom.window.document.querySelector("#root")!;
     const root = createRoot(container);
     await act(async () => root.render(<MemoryRouter><AutomatedInterviewPage /></MemoryRouter>));
@@ -25,6 +26,9 @@ describe("automated interview page", () => {
     await act(async () => startButton.click());
     expect(container.textContent).toContain("来过 · 自动提问");
     expect(container.querySelector("textarea")?.getAttribute("aria-label") ?? container.querySelector("label[for=interview-answer]")?.textContent).toContain("你的回答");
+    expect(scrollCalls.at(-1)).toMatchObject({ behavior: "smooth", block: "end" });
+    expect(container.innerHTML).not.toContain("sticky bottom-");
+    expect(container.innerHTML).not.toContain("overflow-y-");
     root.unmount();
   });
 });

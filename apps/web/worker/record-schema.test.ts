@@ -16,6 +16,11 @@ describe("text interview draft schema", () => {
     expect(draftSchema.safeParse(validDraft).success).toBe(true);
   });
 
+  it("accepts only the known automatic interview marker", () => {
+    expect(draftSchema.safeParse({ ...validDraft, ingestionMethod: "automated_interview" }).success).toBe(true);
+    expect(draftSchema.safeParse({ ...validDraft, ingestionMethod: "automatic" }).success).toBe(false);
+  });
+
   it("rejects third-party message roles", () => {
     const result = draftSchema.safeParse({ ...validDraft, messages: [{ speakerRole: "system", body: "joined" }, ...validDraft.messages] });
     expect(result.success).toBe(false);

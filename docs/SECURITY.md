@@ -121,6 +121,8 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 - OCR 结果的坐标和置信度只用于当前校对界面；提交 `RecordDraft` 时显式重建消息对象，只保留 `speakerRole` 与 `body`。
 - OCR 输入限制为 1–5 张 PNG/JPEG/WebP，单图最多 15 MB、解码后最多 4000 万像素；限制用于降低浏览器内存/解码风险，不代表图片内容安全或识别结果可信。
 - 在线 visitor UUID 只保存在浏览器 localStorage 与活动 WebSocket attachment，不进入 URL，不写入 D1 或应用日志，也不主动关联 IP、路径或账户；Cloudflare 仍会按其平台规则处理连接元数据。对外只广播聚合人数。
+- `/privacy` 准确列出当前 Cookie、本地存储、内容生命周期与 Cloudflare、Yeah SMTP、Google Fonts、Paddle BCE、jsDelivr 数据边界；`/terms` 说明上传授权、公开风险与治理路径，注册和自动采访开始前均提供明确链接。任何数据流、保留期限或外部服务变化都必须同步政策正文。
+- 自动采访草稿的 `ingestionMethod`、`conductedAt` 和机器提问由 Worker 与上一版 D1 快照比较并锁定；浏览器只读状态只改善体验，不承担完整性授权。
 
 ## 12. 依赖与供应链边界
 

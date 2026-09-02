@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeftRight, LockKeyhole, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { parsePastedConversation } from "../lib/conversation";
 import type { OcrConversationResult } from "../lib/ocr-conversation";
@@ -20,6 +20,7 @@ export function emptyDraft(): RecordDraft {
 
 export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?: RecordDraft; submitLabel: string; busy?: boolean; onSubmit: (draft: RecordDraft) => Promise<void> }) {
   const [draft, setDraft] = useState<RecordDraft>(initial ?? emptyDraft());
+  const automated = draft.ingestionMethod === "automated_interview";
   const [pasted, setPasted] = useState("");
   const [parseNotice, setParseNotice] = useState<string | null>(null);
 
@@ -70,8 +71,8 @@ export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?:
 
   return <form onSubmit={submit} className="space-y-8">
     <fieldset className="paper-card space-y-5 p-5 tablet:p-8">
-      <legend className="record-label px-2 text-seal">01 · 导入采访对话</legend>
-      <OcrImportPanel onImport={importScreenshots} />
+      <legend className="record-label px-2 text-seal">01 · {automated ? "自动采访来源" : "导入采访对话"}</legend>
+      {automated ? <div className="flex items-start gap-3 text-sm leading-7 text-ink-muted"><LockKeyhole className="mt-1 shrink-0 text-seal" size={18}/><p>这段对话由本站自动采访程序直接生成。当前登录账户会被认领为被采访者本人；采访开始时间、自动采访者及其提问会保留原样。</p></div> : <><OcrImportPanel onImport={importScreenshots} />
       <details className="border-t border-line pt-5">
         <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-blueprint">没有截图？粘贴纯文本</summary>
         <div className="mt-4 space-y-4">
@@ -80,35 +81,35 @@ export function RecordForm({ initial, submitLabel, busy, onSubmit }: { initial?:
           <button type="button" className="button-secondary" onClick={importConversation}><Sparkles size={16} />识别为消息气泡</button>
         </div>
       </details>
-      {parseNotice && <p className="text-sm text-ink-muted" role="status">{parseNotice}</p>}
+      {parseNotice && <p className="text-sm text-ink-muted" role="status">{parseNotice}</p>}</>}
     </fieldset>
 
     <fieldset className="paper-card space-y-5 p-5 tablet:p-8">
       <legend className="record-label px-2 text-seal">02 · 检查消息归属</legend>
-      <div className="flex justify-end">
+      {!automated && <div className="flex justify-end">
         <button type="button" className="button-secondary" onClick={swapRoles}><ArrowLeftRight size={16} />交换双方</button>
-      </div>
+      </div>}
       {draft.messages.map((message: EditableMessage, index) => <div key={index} className={`grid gap-3 border-b border-line pb-5 tablet:grid-cols-[130px_1fr_44px] ${message.speakerRole === "participant" ? "tablet:pl-16" : "tablet:pr-16"}`}>
-        <button type="button" className="field min-h-11 text-left" onClick={() => updateMessage(index, { speakerRole: message.speakerRole === "interviewer" ? "participant" : "interviewer" })} aria-label={`切换第 ${index + 1} 条消息的发言者`}>
+        {automated ? <span className="field flex min-h-11 items-center text-left" aria-label={`第 ${index + 1} 条消息的发言者`}>{message.speakerRole === "interviewer" ? "自动采访者" : "你（本人）"}</span> : <button type="button" className="field min-h-11 text-left" onClick={() => updateMessage(index, { speakerRole: message.speakerRole === "interviewer" ? "participant" : "interviewer" })} aria-label={`切换第 ${index + 1} 条消息的发言者`}>
           {message.speakerRole === "interviewer" ? "采访者" : "被采访者"}
-        </button>
+        </button>}
         <div>
-          <textarea aria-label={`第 ${index + 1} 条消息内容`} className={`field min-h-20 ${message.confidence !== undefined && message.confidence < 0.8 ? "border-seal" : ""}`} required value={message.body} onChange={(event) => updateMessage(index, { body: event.target.value })} />
+          <textarea aria-label={`第 ${index + 1} 条消息内容`} className={`field min-h-20 ${message.confidence !== undefined && message.confidence < 0.8 ? "border-seal" : ""} ${automated && message.speakerRole === "interviewer" ? "cursor-not-allowed bg-subtle text-ink-muted" : ""}`} required readOnly={automated && message.speakerRole === "interviewer"} value={message.body} onChange={(event) => updateMessage(index, { body: event.target.value })} />
           {message.confidence !== undefined && message.confidence < 0.8 && <p className="mt-2 text-xs leading-5 text-seal">OCR 置信度较低，请重点核对这条文字。</p>}
         </div>
-        <button type="button" className="grid size-11 place-items-center text-ink-muted hover:text-danger" onClick={() => setDraft({ ...draft, messages: draft.messages.filter((_, currentIndex) => currentIndex !== index) })} aria-label="删除消息"><Trash2 size={17} /></button>
+        {automated && message.speakerRole === "interviewer" ? <span className="grid size-11 place-items-center text-ink-muted" title="自动提问不可删除"><LockKeyhole size={15}/></span> : <button type="button" className="grid size-11 place-items-center text-ink-muted hover:text-danger" onClick={() => setDraft({ ...draft, messages: draft.messages.filter((_, currentIndex) => currentIndex !== index) })} aria-label="删除消息"><Trash2 size={17} /></button>}
       </div>)}
-      <button type="button" className="button-secondary" onClick={() => setDraft({ ...draft, messages: [...draft.messages, emptyMessage(draft.messages.at(-1)?.speakerRole === "interviewer" ? "participant" : "interviewer")] })}><Plus size={16} />添加消息</button>
+      <button type="button" className="button-secondary" onClick={() => setDraft({ ...draft, messages: [...draft.messages, emptyMessage(automated ? "participant" : draft.messages.at(-1)?.speakerRole === "interviewer" ? "participant" : "interviewer")] })}><Plus size={16} />{automated ? "补充本人的话" : "添加消息"}</button>
     </fieldset>
 
     <fieldset className="paper-card grid gap-6 p-5 tablet:grid-cols-2 tablet:p-8">
       <legend className="record-label px-2 text-seal">03 · 最少公开信息</legend>
       <div><label className="field-label" htmlFor="displayName">被采访者显示名</label><input id="displayName" className="field" required maxLength={80} value={draft.participant.displayName} onChange={(event) => setDraft({ ...draft, participant: { ...draft.participant, displayName: event.target.value } })} placeholder="可以是真名、化名或匿名称呼" /></div>
       <div><label className="field-label" htmlFor="identityMode">身份呈现</label><select id="identityMode" className="field" value={draft.participant.identityMode} onChange={(event) => setDraft({ ...draft, participant: { ...draft.participant, identityMode: event.target.value as RecordDraft["participant"]["identityMode"] } })}><option value="pseudonym">化名</option><option value="real_name">真实姓名</option><option value="anonymous">匿名</option></select></div>
-      <div><label className="field-label" htmlFor="conductedAt">发生时间</label><input id="conductedAt" type="datetime-local" className="field" required value={draft.conductedAt.slice(0, 16)} onChange={(event) => event.target.value && setDraft({ ...draft, conductedAt: new Date(event.target.value).toISOString() })} /></div>
-      <div><label className="field-label" htmlFor="sourceType">来源</label><select id="sourceType" className="field" value={draft.source.sourceType} onChange={(event) => { const sourceType = event.target.value as SourceType; const platformName = sourceType === "douyin" ? "抖音" : sourceType === "direct" ? "来过" : sourceType === "in_person" ? "线下" : ""; setDraft({ ...draft, source: { ...draft.source, sourceType, platformName } }); }}><option value="douyin">抖音</option><option value="social_media">其他社交媒体</option><option value="in_person">线下采访</option><option value="direct">本站直接采访</option><option value="other">其他</option></select></div>
-      <div><label className="field-label" htmlFor="platformName">平台名称（可选）</label><input id="platformName" className="field" maxLength={80} value={draft.source.platformName ?? ""} onChange={(event) => setDraft({ ...draft, source: { ...draft.source, platformName: event.target.value } })} /></div>
-      <div><label className="field-label" htmlFor="canonicalUrl">原始公开链接（可选）</label><input id="canonicalUrl" type="url" className="field" value={draft.source.canonicalUrl ?? ""} onChange={(event) => setDraft({ ...draft, source: { ...draft.source, canonicalUrl: event.target.value } })} /></div>
+      <div><label className="field-label" htmlFor="conductedAt">发生时间</label><input id="conductedAt" type="datetime-local" className="field disabled:cursor-not-allowed disabled:bg-subtle" required disabled={automated} aria-describedby={automated ? "conductedAt-note" : undefined} value={draft.conductedAt.slice(0, 16)} onChange={(event) => event.target.value && setDraft({ ...draft, conductedAt: new Date(event.target.value).toISOString() })} />{automated && <p id="conductedAt-note" className="mt-2 text-xs leading-5 text-ink-muted">自动记录采访开始时间，不可修改。</p>}</div>
+      <div><label className="field-label" htmlFor="sourceType">来源</label><select id="sourceType" className="field disabled:cursor-not-allowed disabled:bg-subtle" disabled={automated} value={draft.source.sourceType} onChange={(event) => { const sourceType = event.target.value as SourceType; const platformName = sourceType === "douyin" ? "抖音" : sourceType === "direct" ? "来过" : sourceType === "in_person" ? "线下" : ""; setDraft({ ...draft, source: { ...draft.source, sourceType, platformName } }); }}><option value="douyin">抖音</option><option value="social_media">其他社交媒体</option><option value="in_person">线下采访</option><option value="direct">本站直接采访</option><option value="other">其他</option></select></div>
+      <div><label className="field-label" htmlFor="platformName">平台名称（可选）</label><input id="platformName" className="field disabled:cursor-not-allowed disabled:bg-subtle" disabled={automated} maxLength={80} value={draft.source.platformName ?? ""} onChange={(event) => setDraft({ ...draft, source: { ...draft.source, platformName: event.target.value } })} /></div>
+      {!automated && <div><label className="field-label" htmlFor="canonicalUrl">原始公开链接（可选）</label><input id="canonicalUrl" type="url" className="field" value={draft.source.canonicalUrl ?? ""} onChange={(event) => setDraft({ ...draft, source: { ...draft.source, canonicalUrl: event.target.value } })} /></div>}
     </fieldset>
 
     <button disabled={busy} className="button-primary w-full sm:w-auto sm:min-w-56">{busy ? "正在保存…" : submitLabel}</button>

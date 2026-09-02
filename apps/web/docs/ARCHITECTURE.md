@@ -32,10 +32,11 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 | 路径 | 职责 |
 |---|---|
 | `src/App.tsx` | 唯一路由表；区分公共、认证和受保护页面。 |
-| `src/components/AppShell.tsx` | 顶部导航、移动底部 Tab、主题与账户入口。 |
+| `src/components/AppShell.tsx` | 顶部导航、移动底部 Tab、主题、账户与公共政策入口。 |
 | `src/components/RequireAccount.tsx` | 调用 `/api/account/me`；401 时跳转登录并保留返回路径。 |
-| `src/components/RecordForm.tsx` | 所有录入方式汇合到统一 `RecordDraft`；承接 OCR/纯文本导入、角色校对和最少公开信息。 |
-| `src/pages/AutomatedInterviewPage.tsx` | 自动化身份与知情说明、浏览器内采访交互、跳过/结束、安全停止和人工整理入口。 |
+| `src/components/RecordForm.tsx` | 所有录入方式汇合到统一 `RecordDraft`；承接 OCR/纯文本导入、角色校对和最少公开信息，并锁定自动采访来源事实。 |
+| `src/pages/AutomatedInterviewPage.tsx` | 自动化身份与知情说明、整页单滚动区采访交互、跳过/结束、安全停止和人工整理入口。 |
+| `src/pages/{About,Privacy,Terms}Page.tsx` | 公共身份、数据处理与服务条款；内容必须与当前代码和部署一致。 |
 | `src/lib/automated-interview.ts` | 无基础设施依赖的固定提纲、关键词 rank/分解/重组、状态迁移、安全分支与 `RecordDraft` 转换。 |
 | `src/components/OcrImportPanel.tsx` | 页面级图片粘贴、选择、拖放、预览、去重、识别进度、取消、资源释放和错误恢复。 |
 | `src/lib/ocr.ts` | 图片类型、数量、体积与解码像素限制，官方 OCR Worker 协议、模型初始化和逐图识别。 |
@@ -73,6 +74,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 - 新写操作进入 `RecordManagementModule`，必须先检查记录主人或馆长权限并写审计事件。
 - 新录入方式转换为同一个 `RecordDraft`，不新增兼容版采访记录定义。
 - 自动采访规则必须保持机器身份透明、可跳过/结束、普通话题最多一次追问；敏感分支不得被表现层绕过，进行中内容不得在未新增明确同意机制前持久化。
+- `automated_interview` 草稿创建时当前账户必须写为 `claimed`；更新必须在 Worker 中锁定录入标记、采访时间和采访者消息，不能只依赖前端 disabled/readOnly。
 - OCR 坐标、置信度、截图文件和预览 URL 都是浏览器临时状态；提交前必须剥离，只保留 `speakerRole` 与 `body`。
 - `public/_headers` 是普通 Assets 响应头的事实源；OCR vendor 路径先 detach 全局 CSP，再应用只允许固定运行时来源的专用 CSP。修改 OCR 资源地址时必须同步源码、`_headers`、安全文档和生产烟测。
 - 新认证动作复用 `account_actions` 的一次性令牌机制，不把令牌明文入库。

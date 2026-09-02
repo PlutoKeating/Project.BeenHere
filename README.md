@@ -23,7 +23,7 @@
 - **偶然相遇** — 随机打开一份采访记录，认识一个原本不会认识的人。
 - **忠于原话** — 每条记录只保留采访者与被采访者的纯文本对话，以及必要的来源说明。
 - **轻松保存** — 粘贴文字，或直接拖入聊天截图；在浏览器中识别、校对，补充最少信息即可保存。
-- **引导表达** — 登录后可由明确标示身份的自动程序按固定提纲采访；随时跳过或结束，确认整理前不保存。
+- **引导表达** — 登录后可由明确标示身份的自动程序按固定提纲采访；随时跳过或结束，保存时自动认领为本人，确认整理前不保存。
 - **共同维护** — 被采访者可以认领关于自己的记录，与记录主人一起修订。
 - **保留选择** — 任何人都可以提出更正、匿名化或停止公开；人的尊严永远先于内容完整性。
 
@@ -34,7 +34,7 @@
 
 ## 继续遇见
 
-[浏览全部记录](https://beenhere.arr2018.dpdns.org/records) · [了解记录方法](https://beenhere.arr2018.dpdns.org/method) · [更正与撤回](https://beenhere.arr2018.dpdns.org/corrections)
+[浏览全部记录](https://beenhere.arr2018.dpdns.org/records) · [了解记录方法](https://beenhere.arr2018.dpdns.org/method) · [关于我们](https://beenhere.arr2018.dpdns.org/about) · [隐私政策](https://beenhere.arr2018.dpdns.org/privacy) · [条款与条件](https://beenhere.arr2018.dpdns.org/terms) · [更正与撤回](https://beenhere.arr2018.dpdns.org/corrections)
 
 <details>
 <summary>为建设者准备的文档</summary>

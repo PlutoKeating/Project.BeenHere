@@ -9,6 +9,7 @@ import type { Account, Env, RecordDraft } from "./types";
 
 const webUrl = z.url().refine((value) => value.startsWith("https://") || value.startsWith("http://"), "链接必须使用 http 或 https。");
 export const draftSchema: z.ZodType<RecordDraft> = z.object({
+  ingestionMethod: z.literal("automated_interview").optional(),
   participant: z.object({
     displayName: z.string().trim().min(1).max(80),
     identityMode: z.enum(["real_name", "pseudonym", "anonymous"]),

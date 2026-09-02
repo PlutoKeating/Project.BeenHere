@@ -1,4 +1,4 @@
-import { deriveRecordPresentation, formatRecordNumber } from "./domain";
+import { automatedInterviewUpdateError, deriveRecordPresentation, formatRecordNumber, ownershipKindForDraft } from "./domain";
 import { HttpError } from "./http";
 import type { Account, RecordDraft } from "./types";
 
@@ -28,13 +28,14 @@ export class RecordManagementModule {
     const recordId = uid("record");
     const now = new Date().toISOString();
     const presentation = deriveRecordPresentation(draft);
+    const ownershipKind = ownershipKindForDraft(draft);
     await this.db.batch([
       this.db.prepare("INSERT INTO people (id, slug, display_name, identity_mode, bio, created_at, updated_at) VALUES (?, ?, ?, ?, '', ?, ?)").bind(personId, personId, draft.participant.displayName, draft.participant.identityMode, now, now),
       this.db.prepare("INSERT INTO interview_records (id, person_id, title, excerpt, conducted_at, random_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").bind(recordId, personId, presentation.title, presentation.excerpt, draft.conductedAt, Math.random(), now, now),
-      this.db.prepare("INSERT INTO record_owners (record_id, account_id, ownership_kind, granted_by, created_at) VALUES (?, ?, 'uploader', ?, ?)").bind(recordId, account.id, account.id, now),
+      this.db.prepare("INSERT INTO record_owners (record_id, account_id, ownership_kind, granted_by, created_at) VALUES (?, ?, ?, ?, ?)").bind(recordId, account.id, ownershipKind, account.id, now),
       this.db.prepare("INSERT INTO record_drafts (record_id, revision, snapshot, updated_by, updated_at) VALUES (?, 1, ?, ?, ?)").bind(recordId, JSON.stringify(draft), account.id, now),
       this.db.prepare("INSERT INTO source_records (id, record_id, source_type, platform_name, canonical_url, captured_at) VALUES (?, ?, ?, ?, ?, ?)").bind(uid("source"), recordId, draft.source.sourceType, draft.source.platformName ?? null, draft.source.canonicalUrl ?? null, now),
-      this.audit(account, "record.created", recordId, "创建采访记录"),
+      this.audit(account, "record.created", recordId, ownershipKind === "claimed" ? "创建本人自动采访记录" : "创建采访记录"),
     ]);
     return { recordId, revision: 1 };
   }
@@ -61,6 +62,11 @@ export class RecordManagementModule {
 
   async update(recordId: string, draft: RecordDraft, expectedRevision: number, account: Account) {
     await this.assertManage(recordId, account);
+    const current = await this.db.prepare("SELECT revision, snapshot FROM record_drafts WHERE record_id = ?").bind(recordId).first<{ revision: number; snapshot: string }>();
+    if (!current) throw new HttpError(404, "record_not_found", "没有找到这条采访记录。\n");
+    if (current.revision !== expectedRevision) throw new HttpError(409, "revision_conflict", "内容已被其他记录主人修改，请重新载入。\n");
+    const immutableError = automatedInterviewUpdateError(JSON.parse(current.snapshot) as RecordDraft, draft);
+    if (immutableError) throw new HttpError(400, "automated_interview_immutable", `${immutableError}\n`);
     const nextRevision = expectedRevision + 1;
     const now = new Date().toISOString();
     const presentation = deriveRecordPresentation(draft);

@@ -29,4 +29,11 @@ describe("mobile navigation", () => {
     expect(markup).toContain("AGPLv3");
     expect(markup).toContain("本软件不提供任何担保");
   });
+
+  it("exposes the public identity and policy pages from the site shell", () => {
+    const markup = renderShell();
+    expect(markup).toContain('href="/about"');
+    expect(markup).toContain('href="/privacy"');
+    expect(markup).toContain('href="/terms"');
+  });
 });
