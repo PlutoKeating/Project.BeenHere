@@ -183,6 +183,19 @@ npx wrangler d1 migrations list beenhere-records --remote
 
 `0004_single_participant_claim.sql` 为 `record_owners` 增加部分唯一索引，使每条采访记录最多有一个 `claimed` 类型主人。应用前必须用聚合查询确认不存在多重认领；若存在重复，迁移应失败并停止发布，不得自动删除或改写现有主人。
 
+`0005_automated_interview_claim_invariant.sql` 增加自动采访草稿与 `claimed` owner 的双向保护触发器。它不自动猜测或改写旧数据；历史修复必须在迁移部署后使用下面的受控脚本。
+
+### 自动采访认领回填
+
+早期自动采访请求曾被旧版 schema 丢弃 `ingestionMethod`，使其 owner 错记为 `uploader`。先只读预览精确来源特征，再显式应用：
+
+```bash
+npm run claims:backfill:remote --workspace @beenhere/web
+npm run claims:backfill:remote --workspace @beenhere/web -- --apply
+```
+
+脚本只选择来源为 `direct / 来过 · 自动采访`、缺少录入标记、仅有一个 uploader 且没有 claimed owner 的记录。应用前确认四个 0005 触发器并打印 Time Travel bookmark；每条记录通过同一条 D1 多语句 batch 使用 record、owner、revision 与原 snapshot 的 CAS 条件，升级 owner、补回当前草稿标记、递增 revision 并写 `record.automated_claim_repaired` 审计，随后逐项验证。脚本不改写不可变 `published_editions.snapshot`。
+
 ### 标题数据回填
 
 标题算法升级不改变采访记录的数据模型、表字段或 `published_editions.snapshot`，但会通过 `0003_audit_derived_title_updates.sql` 新增审计触发器。发布新 Worker 后，先只读预览，再在确认结果和恢复点后显式应用：

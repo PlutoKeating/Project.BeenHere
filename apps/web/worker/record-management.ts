@@ -135,8 +135,6 @@ export class RecordManagementModule {
     const record = await this.db.prepare("SELECT id FROM interview_records WHERE id = ? AND visibility != 'deleted'").bind(recordId).first();
     if (!record) throw new HttpError(404, "record_not_found", "没有找到这条采访记录。\n");
     if (await this.isClaimed(recordId)) throw new HttpError(409, "already_claimed", "这条采访记录已经由被采访者认领。\n");
-    const owner = await this.db.prepare("SELECT 1 AS ok FROM record_owners WHERE record_id = ? AND account_id = ?").bind(recordId, account.id).first();
-    if (owner) throw new HttpError(409, "already_owner", "你已经是这条采访记录的主人。\n");
     const claimId = uid("claim");
     try {
       const results = await this.db.batch([
@@ -188,7 +186,10 @@ export class RecordManagementModule {
     ];
     if (decision === "approved") statements.push(this.db.prepare(`INSERT INTO record_owners (record_id, account_id, ownership_kind, granted_by, created_at)
       SELECT record_id, claimant_account_id, 'claimed', ?, ? FROM claim_requests
-      WHERE id = ? AND reviewed_at = ? AND reviewed_by = ? AND status = 'approved'`).bind(account.id, now, claimId, now, account.id));
+      WHERE id = ? AND reviewed_at = ? AND reviewed_by = ? AND status = 'approved'
+      ON CONFLICT(record_id, account_id) DO UPDATE SET
+        ownership_kind = 'claimed', granted_by = excluded.granted_by, created_at = excluded.created_at
+      WHERE record_owners.ownership_kind != 'claimed'`).bind(account.id, now, claimId, now, account.id));
     if (decision === "approved") statements.push(this.db.prepare(`UPDATE claim_requests
       SET status = 'cancelled', reviewed_by = ?, review_note = '该采访记录已由被采访者认领。', reviewed_at = ?
       WHERE record_id = ? AND id != ? AND status = 'pending'

@@ -108,13 +108,13 @@
 | `PATCH /api/account/records/{id}` | `{ expectedRevision, draft }`；冲突返回 409。 |
 | `DELETE /api/account/records/{id}` | `{ reason }`；软删除并写审计。 |
 | `POST /api/account/records/{id}/publish` | `{ changeSummary }`；生成新公开版本。 |
-| `POST /api/account/records/{id}/claim` | `{ requestText }`；申请文本 20–2000 字符。 |
+| `POST /api/account/records/{id}/claim` | `{ requestText }`；申请文本 20–2000 字符；已有 uploader/assigned 编辑权不妨碍提交本人认领。 |
 | `GET /api/account/claims` | 返回收到与发出的认领申请。 |
 | `POST /api/account/claims/{id}/review` | `decision=approved|rejected` 与可选 `note`。 |
 
 删除理由为 3–500 字符；公开变更说明为 2–500 字符；认领审阅说明最多 1000 字符。创建认领申请与更正申请成功返回 201；创建采访记录成功也返回 201。
 
-每条采访记录最多有一个 `claimed` 类型记录主人。已有被采访者认领时，新申请与其他待审申请的通过操作返回 `409 already_claimed`；首个申请通过后，其余待审申请自动取消。
+每条采访记录最多有一个 `claimed` 类型记录主人。已有被采访者认领时，新申请与其他待审申请的通过操作返回 `409 already_claimed`；首个申请通过后，其余待审申请自动取消。申请人已经是该记录的 `uploader` 或 `assigned` owner 时，审批会把同一 owner 行升级为 `claimed`，而不是创建冲突的第二行。
 
 `draft` 的规范结构定义在 `worker/index.ts` 与 `worker/types.ts`：
 

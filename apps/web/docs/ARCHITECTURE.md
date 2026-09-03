@@ -62,9 +62,9 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 
 ## 持久化
 
-`migrations/*.sql` 是 D1 schema 的唯一来源。当前 binding 名为 `DB`，数据库名为 `beenhere-records`。`record_drafts.snapshot` 与 `published_editions.snapshot` 保存完整 `RecordDraft` JSON；公开版本不可变，当前版本通过 `interview_records.current_edition_id` 指向。
+`migrations/*.sql` 是 D1 schema 的唯一来源。当前 binding 名为 `DB`，数据库名为 `beenhere-records`。`record_drafts.snapshot` 与 `published_editions.snapshot` 保存完整 `RecordDraft` JSON；公开版本不可变，当前版本通过 `interview_records.current_edition_id` 指向。0005 的触发器保证自动采访草稿与 `claimed` owner 同时存在，且该 owner 不会被降级或删除。
 
-生产按顺序应用 `0001_initial.sql`、`0002_simplify_interview_messages.sql` 与 `0003_audit_derived_title_updates.sql`。当前正文表只有 `interview_messages`；旧正文/话题表已由 0002 删除。0003 的标题审计触发器使根记录标题更新与 `record.title_rebuilt` 审计原子提交。
+生产按顺序应用 `0001_initial.sql` 至 `0005_automated_interview_claim_invariant.sql`。当前正文表只有 `interview_messages`；旧正文/话题表已由 0002 删除。0003 的标题审计触发器使根记录标题更新与 `record.title_rebuilt` 审计原子提交；0004 限制单条记录只有一个 `claimed` owner；0005 保护自动采访草稿与 claimed owner 的一致性。
 
 实时状态不进入 D1。`PRESENCE` binding 始终指向一个名为 `global` 的 SQLite-backed `PresenceRoom`；WebSocket attachment 只保存随机 visitor UUID，以便 Durable Object 休眠后恢复去重计数。
 
@@ -77,6 +77,7 @@ AutomatedInterviewPage ── src/lib/automated-interview.ts ── RecordDraft
 - 标题只能由 `worker/domain.ts` 根据全部 participant 消息派生；沿用关键词 rank、语句 decomposition 与标题 reassembly，不把 interviewer 开场白当标题，不在浏览器和维护脚本复制另一套算法。
 - 自动采访规则必须保持机器身份透明、可跳过/结束、普通话题最多一次追问；敏感分支不得被表现层绕过，进行中内容不得在未新增明确同意机制前持久化。
 - `automated_interview` 草稿创建时当前账户必须写为 `claimed`；更新必须在 Worker 中锁定录入标记、采访时间和采访者消息，不能只依赖前端 disabled/readOnly。
+- 记录主人身份和被采访者身份不能互相替代：已有 `uploader|assigned` owner 可以提交认领，获批时使用同一主键的 UPSERT 升级为 `claimed`，创建审计仍保留原始上传事实。
 - OCR 坐标、置信度、截图文件和预览 URL 都是浏览器临时状态；提交前必须剥离，只保留 `speakerRole` 与 `body`。
 - `public/_headers` 是普通 Assets 响应头的事实源；OCR vendor 路径先 detach 全局 CSP，再应用只允许固定运行时来源的专用 CSP。修改 OCR 资源地址时必须同步源码、`_headers`、安全文档和生产烟测。
 - 新认证动作复用 `account_actions` 的一次性令牌机制，不把令牌明文入库。

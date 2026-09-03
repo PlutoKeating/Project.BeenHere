@@ -166,6 +166,18 @@ npx wrangler d1 execute beenhere-records --remote --command \
 
 ## 9. 周期性数据维护
 
+### 自动采访认领修复
+
+早期自动采访因旧版请求 schema 丢失 `ingestionMethod` 时，先运行只读预览：
+
+```bash
+npm run claims:backfill:remote --workspace @beenhere/web
+```
+
+仅当候选均符合 `direct / 来过 · 自动采访` 来源、单一 uploader、无 claimed owner 且草稿缺少标记时，才追加 `-- --apply`。脚本会先确认 0005 触发器并打印恢复 bookmark，再用 D1 多语句 batch 以 CAS 更新 owner 与草稿 revision、写入脱敏审计，逐条验证后重新扫描。若候选或数量不符合预期，停止而不是手写宽泛 UPDATE；不得修改 `published_editions.snapshot`。
+
+### 标题维护
+
 标题算法升级属于受控数据维护。先发布包含新算法的 Worker，再运行只读预览：
 
 ```bash

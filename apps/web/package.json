@@ -18,6 +18,7 @@
     "cf:typegen": "wrangler types worker/env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply beenhere-records --local",
     "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote",
+    "claims:backfill:remote": "node --experimental-strip-types scripts/backfill-automated-interview-claims.mjs",
     "titles:backfill:remote": "node --experimental-strip-types scripts/backfill-record-titles.mjs"
   },
   "dependencies": {

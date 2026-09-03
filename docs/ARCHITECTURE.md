@@ -130,7 +130,7 @@ erDiagram
 
 - `people`：被采访者公开身份，支持实名、化名、匿名；公开路径由系统生成。
 - `interview_records`：记录根实体、公开编号、visibility、当前公开版本、软删除信息，以及从消息派生的标题和摘要。标题只根据全部被采访者消息生成；摘要仍取首条被采访者消息。
-- `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。每条记录最多有一个 `claimed` 类型主人，由数据库部分唯一索引保证。
+- `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。同一账户同时是上传者和被采访者时，获批认领会把既有关系升级为 `claimed`；原始创建者仍可由 `record.created` 审计追溯。每条记录最多有一个 `claimed` 类型主人，由数据库部分唯一索引保证。
 - `record_drafts`：当前精简 JSON 草稿和递增 revision，用于乐观并发控制；草稿包含 participant、conductedAt、messages、source，以及自动采访草稿才有的可选 `ingestionMethod`。
 - `published_editions`：不可变 JSON 快照、版本号、变更说明和 SHA-256 内容摘要。
 - `interview_messages`：当前公开版本的有序纯文本消息，角色只允许 `interviewer|participant`。
@@ -143,7 +143,7 @@ erDiagram
 - `audit_events`：采访记录关键写操作的操作者、理由与目标。
 - `public_request_limits`：公众更正接口的一小时计数桶。
 
-生产 D1 按顺序应用 `0001_initial.sql`、`0002_simplify_interview_messages.sql`、`0003_audit_derived_title_updates.sql` 与 `0004_single_participant_claim.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除旧表；第三个迁移用数据库触发器保证任何根记录标题变化与 `record.title_rebuilt` 审计处于同一个 SQLite 事务；第四个迁移保证每条记录最多有一个被采访者认领。Cloudflare 内部表不属于应用 schema。
+生产 D1 按顺序应用 `0001_initial.sql` 至 `0005_automated_interview_claim_invariant.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除旧表；第三个迁移用数据库触发器保证任何根记录标题变化与 `record.title_rebuilt` 审计处于同一个 SQLite 事务；第四个迁移保证每条记录最多有一个被采访者认领；第五个迁移保证带 `automated_interview` 标记的草稿始终存在且保留 `claimed` 主人。Cloudflare 内部表不属于应用 schema。
 
 数据库定义只来自顺序迁移。已在生产应用的迁移不得修改；新增 schema 必须增加新的编号文件。
 
@@ -227,6 +227,7 @@ active ──邮件确认删除──> deleted（资料匿名化、会话与凭�
 
 - 相关 D1 写入使用 `DB.batch()`，失败时整批回滚。
 - 正常运行时写入都经过 Worker 业务模块；仓库维护的生产回填脚本是唯一例外，依赖 Cloudflare 运维凭据、显式 `--apply`、Time Travel bookmark、CAS 条件与数据库触发器审计，不形成公共 HTTP 能力。
+- 早期自动采访若因旧请求 schema 丢失录入标记，使用 `claims:backfill:remote` 按精确来源特征预览并修复；它升级 owner、补回当前草稿标记并递增 revision，不改写不可变公开版本。
 - 草稿更新依赖 `expectedRevision`；冲突返回 409，客户端必须重新加载，不能静默覆盖。
 - SMTP 发送失败时撤销新建的一次性令牌；注册账户可保持 pending 并重新注册触发新邮件。
 - OCR 初始化或推理失败只影响当前浏览器的辅助录入；界面提供重试与纯文本回退，正式采访数据和 D1 不受影响。
