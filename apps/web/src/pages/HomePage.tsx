@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, Compass, MessageCircleQuestion } from "lucide-react";
+import { ArrowRight, Compass, MessageCircleQuestion } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { RecordCard } from "../components/RecordCard";
 import { RecordMark } from "../components/RecordMark";
@@ -28,13 +28,10 @@ export function HomePage() {
             这里没有重要人物，只有被认真保存的普通时刻。打开一份采访记录，遇见一个本不会认识的人。
           </p>
           <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-            <button type="button" onClick={drift} className="button-primary sm:min-w-56">
+            <button type="button" onClick={drift} className="button-secondary">
               <Compass size={17} aria-hidden="true" />捡起一个漂流瓶
             </button>
-            <a href="#today" className="button-secondary">
-              浏览采访记录 <ArrowDown size={16} aria-hidden="true" />
-            </a>
-            <Link to="/studio/interview" className="button-secondary border-seal/60 text-seal hover:bg-seal/5">
+            <Link to="/studio/interview" className="button-primary sm:min-w-56">
               <MessageCircleQuestion size={17} aria-hidden="true" />开始自动采访
             </Link>
           </div>
