@@ -13,7 +13,7 @@ export interface RecordDraft {
   messages: InterviewMessage[];
   source: { sourceType: SourceType; platformName?: string; canonicalUrl?: string };
 }
-export interface InterviewRecordDetail extends InterviewRecordSummary { edition: { number: number; publishedAt: string; changeSummary: string; contentHash: string }; messages: Required<InterviewMessage>[]; source: { sourceType: SourceType; platformName: string | null; canonicalUrl: string | null } | null }
+export interface InterviewRecordDetail extends InterviewRecordSummary { isClaimed: boolean; edition: { number: number; publishedAt: string; changeSummary: string; contentHash: string }; messages: Required<InterviewMessage>[]; source: { sourceType: SourceType; platformName: string | null; canonicalUrl: string | null } | null }
 export interface ManagedRecord { id: string; record_number: string | null; title: string; visibility: RecordVisibility; updated_at: string; revision: number }
 export interface EditableRecord { id: string; record_number: string | null; visibility: RecordVisibility; revision: number; snapshot: string }
 export interface ClaimRequest { id: string; record_id: string; request_text: string; status: "pending" | "approved" | "rejected" | "cancelled"; created_at: string; title: string; claimant_name?: string }

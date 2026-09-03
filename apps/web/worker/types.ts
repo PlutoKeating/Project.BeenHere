@@ -57,6 +57,7 @@ export interface RecordDraft {
 }
 
 export interface InterviewRecordDetail extends InterviewRecordSummary {
+  isClaimed: boolean;
   edition: { number: number; publishedAt: string; changeSummary: string; contentHash: string };
   messages: InterviewMessage[];
   source: { sourceType: string; platformName: string | null; canonicalUrl: string | null } | null;

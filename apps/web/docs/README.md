@@ -31,6 +31,8 @@ npm run prepare:ocr
 
 `/about`、`/privacy`、`/terms` 是公共信任页面；顶栏/移动更多菜单、页脚、注册页和自动采访知情说明提供入口。修改账户、内容公开、第三方资源或保留期限时必须同步这些页面。
 
+公开记录详情通过 `isClaimed` 展示认领可用性：已有 `claimed` 类型记录主人时，“我是被采访者”显示为灰色禁用按钮；Worker 同时拒绝新申请与重复批准，数据库唯一索引提供最终并发约束。
+
 `npm run deploy` 直接面向 `wrangler.jsonc` 中的现有生产 Worker/custom domain，不是本地预览命令；只在完成生产授权、D1 recovery bookmark 与全量门禁后使用。日常发布仍以根文档规定的 GitHub Actions 链路为准。
 
 采访标题由 `worker/domain.ts` 从全部被采访者消息确定性派生。`npm run titles:backfill:remote` 只读预览生产旧标题回填；显式追加 `-- --apply` 才会在打印 D1 Time Travel bookmark 后更新根记录标题并写审计。脚本对非公开标题做脱敏，且不会改写公开版本快照。

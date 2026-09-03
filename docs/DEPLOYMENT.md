@@ -181,6 +181,8 @@ cd apps/web
 npx wrangler d1 migrations list beenhere-records --remote
 ```
 
+`0004_single_participant_claim.sql` 为 `record_owners` 增加部分唯一索引，使每条采访记录最多有一个 `claimed` 类型主人。应用前必须用聚合查询确认不存在多重认领；若存在重复，迁移应失败并停止发布，不得自动删除或改写现有主人。
+
 ### 标题数据回填
 
 标题算法升级不改变采访记录的数据模型、表字段或 `published_editions.snapshot`，但会通过 `0003_audit_derived_title_updates.sql` 新增审计触发器。发布新 Worker 后，先只读预览，再在确认结果和恢复点后显式应用：

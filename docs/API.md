@@ -46,7 +46,7 @@
 |---|---|
 | `GET /api/v1/meta` | 公开采访记录、人物和年份计数。 |
 | `GET /api/v1/records?limit=24` | 公开记录列表；limit 被限制在 1–50。 |
-| `GET /api/v1/records/{recordNumber}` | 按 `BH-000001` 读取 public/unlisted 记录与当前版本。 |
+| `GET /api/v1/records/{recordNumber}` | 按 `BH-000001` 读取 public/unlisted 记录与当前版本；`isClaimed` 表示是否已有被采访者认领。 |
 | `GET /api/v1/drift?exclude=BH-000001` | 随机返回一条公开记录；最多使用 20 个有效排除编号。 |
 | `GET /api/v1/search?q=...` | 搜索编号、标题、摘要、显示名与公开版本快照；查询截取前 100 字符，最多 50 条。 |
 | `GET /api/v1/people/{slug}` | 被采访者资料与公开记录。 |
@@ -113,6 +113,8 @@
 | `POST /api/account/claims/{id}/review` | `decision=approved|rejected` 与可选 `note`。 |
 
 删除理由为 3–500 字符；公开变更说明为 2–500 字符；认领审阅说明最多 1000 字符。创建认领申请与更正申请成功返回 201；创建采访记录成功也返回 201。
+
+每条采访记录最多有一个 `claimed` 类型记录主人。已有被采访者认领时，新申请与其他待审申请的通过操作返回 `409 already_claimed`；首个申请通过后，其余待审申请自动取消。
 
 `draft` 的规范结构定义在 `worker/index.ts` 与 `worker/types.ts`：
 

@@ -11,6 +11,10 @@ async function digest(value: string): Promise<string> {
 export class RecordManagementModule {
   constructor(private readonly db: D1Database) {}
 
+  private async isClaimed(recordId: string): Promise<boolean> {
+    return Boolean(await this.db.prepare("SELECT 1 AS ok FROM record_owners WHERE record_id = ? AND ownership_kind = 'claimed' LIMIT 1").bind(recordId).first());
+  }
+
   private async assertManage(recordId: string, account: Account): Promise<void> {
     if (account.role === "director") return;
     const owner = await this.db.prepare("SELECT 1 AS ok FROM record_owners WHERE record_id = ? AND account_id = ?").bind(recordId, account.id).first();
@@ -130,15 +134,25 @@ export class RecordManagementModule {
   async submitClaim(recordId: string, requestText: string, account: Account) {
     const record = await this.db.prepare("SELECT id FROM interview_records WHERE id = ? AND visibility != 'deleted'").bind(recordId).first();
     if (!record) throw new HttpError(404, "record_not_found", "没有找到这条采访记录。\n");
+    if (await this.isClaimed(recordId)) throw new HttpError(409, "already_claimed", "这条采访记录已经由被采访者认领。\n");
     const owner = await this.db.prepare("SELECT 1 AS ok FROM record_owners WHERE record_id = ? AND account_id = ?").bind(recordId, account.id).first();
     if (owner) throw new HttpError(409, "already_owner", "你已经是这条采访记录的主人。\n");
     const claimId = uid("claim");
     try {
-      await this.db.batch([
-        this.db.prepare("INSERT INTO claim_requests (id, record_id, claimant_account_id, request_text) VALUES (?, ?, ?, ?)").bind(claimId, recordId, account.id, requestText),
-        this.audit(account, "claim.submitted", recordId, "提交本人认领申请"),
+      const results = await this.db.batch([
+        this.db.prepare(`INSERT INTO claim_requests (id, record_id, claimant_account_id, request_text)
+          SELECT ?, ?, ?, ? WHERE NOT EXISTS (
+            SELECT 1 FROM record_owners WHERE record_id = ? AND ownership_kind = 'claimed'
+          )`).bind(claimId, recordId, account.id, requestText, recordId),
+        this.db.prepare(`INSERT INTO audit_events
+          (id, actor_account_id, actor_label, action, target_type, target_id, reason, created_at)
+          SELECT ?, ?, ?, 'claim.submitted', 'interview_record', ?, '提交本人认领申请', ?
+          FROM claim_requests WHERE id = ? AND status = 'pending'`).bind(uid("audit"), account.id, account.email, recordId, new Date().toISOString(), claimId),
       ]);
-    } catch {
+      if (!results[0]?.meta.changes) throw new HttpError(409, "already_claimed", "这条采访记录已经由被采访者认领。\n");
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      if (await this.isClaimed(recordId)) throw new HttpError(409, "already_claimed", "这条采访记录已经由被采访者认领。\n");
       throw new HttpError(409, "claim_pending", "你已经提交过待处理的认领申请。\n");
     }
     return { claimId };
@@ -164,6 +178,7 @@ export class RecordManagementModule {
     if (!claim) throw new HttpError(404, "claim_not_found", "没有找到认领申请。\n");
     await this.assertManage(claim.record_id, account);
     if (claim.status !== "pending") throw new HttpError(409, "claim_resolved", "该申请已经处理。\n");
+    if (decision === "approved" && await this.isClaimed(claim.record_id)) throw new HttpError(409, "already_claimed", "这条采访记录已经由被采访者认领。\n");
     const now = new Date().toISOString();
     const statements: D1PreparedStatement[] = [
       this.db.prepare("UPDATE claim_requests SET status = ?, reviewed_by = ?, review_note = ?, reviewed_at = ? WHERE id = ? AND status = 'pending'").bind(decision, account.id, note, now, claimId),
@@ -171,10 +186,22 @@ export class RecordManagementModule {
         SELECT ?, ?, ?, ?, 'interview_record', ?, ?, ? FROM claim_requests
         WHERE id = ? AND reviewed_at = ? AND reviewed_by = ?`).bind(uid("audit"), account.id, account.email, `claim.${decision}`, claim.record_id, note || (decision === "approved" ? "同意认领" : "拒绝认领"), now, claimId, now, account.id),
     ];
-    if (decision === "approved") statements.push(this.db.prepare(`INSERT OR IGNORE INTO record_owners (record_id, account_id, ownership_kind, granted_by, created_at)
+    if (decision === "approved") statements.push(this.db.prepare(`INSERT INTO record_owners (record_id, account_id, ownership_kind, granted_by, created_at)
       SELECT record_id, claimant_account_id, 'claimed', ?, ? FROM claim_requests
       WHERE id = ? AND reviewed_at = ? AND reviewed_by = ? AND status = 'approved'`).bind(account.id, now, claimId, now, account.id));
-    const results = await this.db.batch(statements);
+    if (decision === "approved") statements.push(this.db.prepare(`UPDATE claim_requests
+      SET status = 'cancelled', reviewed_by = ?, review_note = '该采访记录已由被采访者认领。', reviewed_at = ?
+      WHERE record_id = ? AND id != ? AND status = 'pending'
+      AND EXISTS (SELECT 1 FROM claim_requests current
+        WHERE current.id = ? AND current.reviewed_at = ? AND current.reviewed_by = ? AND current.status = 'approved')
+    `).bind(account.id, now, claim.record_id, claimId, claimId, now, account.id));
+    let results: D1Result[];
+    try {
+      results = await this.db.batch(statements);
+    } catch (error) {
+      if (decision === "approved" && await this.isClaimed(claim.record_id)) throw new HttpError(409, "already_claimed", "这条采访记录已经由被采访者认领。\n");
+      throw error;
+    }
     if (!results[0]?.meta.changes) throw new HttpError(409, "claim_resolved", "该申请已经被其他记录主人处理。\n");
   }
 }

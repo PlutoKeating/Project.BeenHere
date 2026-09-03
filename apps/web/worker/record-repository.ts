@@ -59,8 +59,10 @@ export class RecordRepository {
       FROM source_records WHERE record_id = ? ORDER BY captured_at LIMIT 1`).bind(row.id).first<{
       source_type: string; platform_name: string | null; canonical_url: string | null;
     }>();
+    const claimedOwner = await this.db.prepare("SELECT 1 AS ok FROM record_owners WHERE record_id = ? AND ownership_kind = 'claimed' LIMIT 1").bind(row.id).first();
     return {
       ...mapSummary(row),
+      isClaimed: Boolean(claimedOwner),
       edition: { number: edition.edition_number, publishedAt: edition.published_at, changeSummary: edition.change_summary, contentHash: edition.content_hash },
       messages: messages.results.map((message) => ({ id: message.id, speakerRole: message.speaker_role, body: message.body })),
       source: source ? { sourceType: source.source_type, platformName: source.platform_name, canonicalUrl: source.canonical_url } : null,

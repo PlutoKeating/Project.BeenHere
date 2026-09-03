@@ -130,7 +130,7 @@ erDiagram
 
 - `people`：被采访者公开身份，支持实名、化名、匿名；公开路径由系统生成。
 - `interview_records`：记录根实体、公开编号、visibility、当前公开版本、软删除信息，以及从消息派生的标题和摘要。标题只根据全部被采访者消息生成；摘要仍取首条被采访者消息。
-- `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。
+- `record_owners`：编辑授权的唯一来源；`uploader|claimed|assigned`。每条记录最多有一个 `claimed` 类型主人，由数据库部分唯一索引保证。
 - `record_drafts`：当前精简 JSON 草稿和递增 revision，用于乐观并发控制；草稿包含 participant、conductedAt、messages、source，以及自动采访草稿才有的可选 `ingestionMethod`。
 - `published_editions`：不可变 JSON 快照、版本号、变更说明和 SHA-256 内容摘要。
 - `interview_messages`：当前公开版本的有序纯文本消息，角色只允许 `interviewer|participant`。
@@ -143,7 +143,7 @@ erDiagram
 - `audit_events`：采访记录关键写操作的操作者、理由与目标。
 - `public_request_limits`：公众更正接口的一小时计数桶。
 
-生产 D1 按顺序应用 `0001_initial.sql`、`0002_simplify_interview_messages.sql` 与 `0003_audit_derived_title_updates.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除旧表；第三个迁移用数据库触发器保证任何根记录标题变化与 `record.title_rebuilt` 审计处于同一个 SQLite 事务。Cloudflare 内部表不属于应用 schema。
+生产 D1 按顺序应用 `0001_initial.sql`、`0002_simplify_interview_messages.sql`、`0003_audit_derived_title_updates.sql` 与 `0004_single_participant_claim.sql`。第二个迁移在确认没有第三角色消息或话题关联后，将旧 `conversation_units` 转换为 `interview_messages`，并删除旧表；第三个迁移用数据库触发器保证任何根记录标题变化与 `record.title_rebuilt` 审计处于同一个 SQLite 事务；第四个迁移保证每条记录最多有一个被采访者认领。Cloudflare 内部表不属于应用 schema。
 
 数据库定义只来自顺序迁移。已在生产应用的迁移不得修改；新增 schema 必须增加新的编号文件。
 
