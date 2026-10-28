@@ -1,13 +1,13 @@
 # 技术架构
 
-本文描述当前已实现的唯一架构。生产域名只有 `beenhere.arr2018.dpdns.org`；系统没有 Cloudflare Access、匿名编辑、内容复核角色、旧 API 或兼容数据模型。
+本文描述当前已实现的唯一架构。生产域名只有 `beenhere.plutokeating.beer`；系统没有 Cloudflare Access、匿名编辑、内容复核角色、旧 API 或兼容数据模型。
 
 ## 1. 运行时拓扑
 
 ```mermaid
 flowchart TD
   Browser[移动端 / 平板 / 桌面浏览器]
-  Domain[beenhere.arr2018.dpdns.org\nCloudflare Custom Domain]
+  Domain[beenhere.plutokeating.beer\nCloudflare Custom Domain]
   Worker[Cloudflare Worker\nproject-been-here / API]
   Assets[Workers Assets\nReact SPA]
   API[同源 API\n/api/*]

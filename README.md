@@ -6,7 +6,7 @@
 
 这里没有重要人物，只有被认真保存的普通时刻。打开一份采访记录，遇见一个本不会认识的人。
 
-[进入来过](https://beenhere.arr2018.dpdns.org) · [捡起一个漂流瓶](https://beenhere.arr2018.dpdns.org/drift)
+[进入来过](https://beenhere.plutokeating.beer) · [捡起一个漂流瓶](https://beenhere.plutokeating.beer/drift)
 
 </div>
 
@@ -34,7 +34,7 @@
 
 ## 继续遇见
 
-[浏览全部记录](https://beenhere.arr2018.dpdns.org/records) · [了解记录方法](https://beenhere.arr2018.dpdns.org/method) · [关于我们](https://beenhere.arr2018.dpdns.org/about) · [隐私政策](https://beenhere.arr2018.dpdns.org/privacy) · [条款与条件](https://beenhere.arr2018.dpdns.org/terms) · [更正与撤回](https://beenhere.arr2018.dpdns.org/corrections)
+[浏览全部记录](https://beenhere.plutokeating.beer/records) · [了解记录方法](https://beenhere.plutokeating.beer/method) · [关于我们](https://beenhere.plutokeating.beer/about) · [隐私政策](https://beenhere.plutokeating.beer/privacy) · [条款与条件](https://beenhere.plutokeating.beer/terms) · [更正与撤回](https://beenhere.plutokeating.beer/corrections)
 
 <details>
 <summary>为建设者准备的文档</summary>

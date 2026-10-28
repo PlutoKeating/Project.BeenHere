@@ -4,7 +4,7 @@
 
 | 资源 | 当前值 | 配置来源 |
 |---|---|---|
-| 生产域名 | `beenhere.arr2018.dpdns.org` | `apps/web/wrangler.jsonc` custom domain |
+| 生产域名 | `beenhere.plutokeating.beer` | `apps/web/wrangler.jsonc` custom domain |
 | Worker | `project-been-here` | `wrangler.jsonc:name` |
 | 入口 | `apps/web/worker/index.ts` | `wrangler.jsonc:main` |
 | 静态资源 | Vite 产物 `apps/web/dist/client` → binding `ASSETS` | `wrangler.jsonc:assets` + Cloudflare Vite Plugin |
@@ -22,6 +22,11 @@
 - D1 已应用 `0001_initial.sql` 和 `0002_simplify_interview_messages.sql`，无待应用迁移；正式正文表为 `interview_messages`，旧 `conversation_units/topics/record_topics` 已不存在。
 - Worker Secrets 名称为 `SESSION_SECRET`、`SMTP_USERNAME`、`SMTP_PASSWORD`、`SUPERADMIN_EMAILS`；只核验名称，不在仓库记录值。
 - 线上 `/`、`/api/health`、`/vendor/paddleocr-worker-0.4.2.js` 均已验证；OCR vendor 文件为 11,341,486 字节并使用 immutable cache。
+
+### 域名迁移核验（2026-10-28）
+
+- 生产 custom domain 与 `SITE_URL` 已迁移为 `beenhere.plutokeating.beer`；Worker 只接受该来源的写请求。旧域名 `beenhere.arr2018.dpdns.org` 已停用且不再解析，不得重新加入配置。
+- 迁移在仓库之外完成；本次以线上为准回写仓库。线上首页 JS/CSS 资源指纹与仓库构建一致，首页与 OCR vendor 两条 CSP 与 `public/_headers` 一致。
 
 此快照记录核验范围，不固定易变的 deployment/version ID。实时版本应通过 `wrangler deployments list` 与目标 GitHub run 的 `headSha` 查询。
 
@@ -161,7 +166,7 @@ git commit -m "<清晰意图>"
 git push origin main
 gh run list --workflow "CI and deploy" --branch main --limit 1
 gh run watch <run-id> --exit-status
-curl --fail https://beenhere.arr2018.dpdns.org/api/health
+curl --fail https://beenhere.plutokeating.beer/api/health
 ```
 
 完成条件：目标提交在 `origin/main`；verify 与 deploy 都 success；生产 health 返回 `ok`。页面可见不等于邮件、登录或 D1 写链路通过；按变更风险补充业务烟测。
@@ -236,7 +241,7 @@ npx wrangler d1 time-travel info beenhere-records
 npx wrangler d1 migrations apply beenhere-records --remote
 cd ../..
 npm run deploy
-curl --fail https://beenhere.arr2018.dpdns.org/api/health
+curl --fail https://beenhere.plutokeating.beer/api/health
 ```
 
 人工部署不会自动创建 GitHub artifact；必须把 bookmark、提交 SHA、操作者、时间和验证结果写入事故记录。

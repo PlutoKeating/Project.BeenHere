@@ -4,7 +4,7 @@
 
 ## 1. 服务目标与变更原则
 
-- 唯一生产入口：`https://beenhere.arr2018.dpdns.org`。
+- 唯一生产入口：`https://beenhere.plutokeating.beer`。
 - 首要保护：账户凭据、采访记录、公开版本和恢复能力。
 - 先只读诊断，再决定写操作；任何 restore、DELETE、角色变更、Secret 轮换和生产回滚都要记录原因与恢复点。
 - 不在终端输出、日志、截图或 issue 中粘贴 Secret 值、会话 Cookie、邮件 token 或完整用户邮箱列表。
@@ -26,13 +26,13 @@
 
 ```bash
 curl --fail --show-error \
-  https://beenhere.arr2018.dpdns.org/api/health
+  https://beenhere.plutokeating.beer/api/health
 
 curl --fail --head \
-  https://beenhere.arr2018.dpdns.org/
+  https://beenhere.plutokeating.beer/
 
 curl --fail --head \
-  https://beenhere.arr2018.dpdns.org/vendor/paddleocr-worker-0.4.2.js
+  https://beenhere.plutokeating.beer/vendor/paddleocr-worker-0.4.2.js
 
 gh run list --workflow "CI and deploy" --branch main --limit 3
 ```
@@ -76,7 +76,7 @@ Workers Logs 已在 `wrangler.jsonc` 开启，可在 Cloudflare Dashboard → Wo
 ### 全站或 API 5xx
 
 ```bash
-curl -i https://beenhere.arr2018.dpdns.org/api/health
+curl -i https://beenhere.plutokeating.beer/api/health
 cd apps/web
 npx wrangler deployments list --name project-been-here --json
 npx wrangler tail project-been-here --format pretty
@@ -213,7 +213,7 @@ cd apps/web
 npx wrangler deployments list --name project-been-here --json
 npx wrangler rollback <KNOWN_GOOD_VERSION_ID> \
   --message "incident: rollback after <reason>"
-curl --fail https://beenhere.arr2018.dpdns.org/api/health
+curl --fail https://beenhere.plutokeating.beer/api/health
 ```
 
 Worker rollback立即把 100% 流量切到指定版本，但不会回滚 D1、Secrets 或外部 SMTP。若目标版本依赖旧 schema/binding，不能单独回滚代码。官方限制见 [Workers Rollbacks](https://developers.cloudflare.com/workers/versions-and-deployments/rollbacks/)。

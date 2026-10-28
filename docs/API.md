@@ -1,6 +1,6 @@
 # HTTP API
 
-生产基址：`https://beenhere.arr2018.dpdns.org`。所有接口同源提供，不承诺跨域访问或兼容旧路径。
+生产基址：`https://beenhere.plutokeating.beer`。所有接口同源提供，不承诺跨域访问或兼容旧路径。
 
 ## 1. 通用协议
 
