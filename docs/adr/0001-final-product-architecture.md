@@ -15,7 +15,7 @@
 
 - 优点：一个部署单元、一个权限模型、同源 Cookie/API，移动端与桌面共享实现。
 - 代价：Worker、D1 与 SMTP 故障会影响同一产品链路；目前没有独立 staging。
-- 约束：新录入方式必须转换为同一个 `RecordDraft`；新数据结构使用顺序迁移；生产发布以 GitHub Actions 和仓库配置为事实源。
+- 约束：新录入方式必须转换为同一个 `RecordDraft`；新数据结构使用顺序迁移；生产发布以仓库配置为事实源，由 Cloudflare Workers Builds 执行（2026-10-28 起取代 GitHub Actions 部署）。
 
 详细现状见 [技术架构](../ARCHITECTURE.md)、[部署架构](../DEPLOYMENT.md)与[安全模型](../SECURITY.md)。
 后续扩展决策见 [实时在线基座](0003-realtime-presence-foundation.md)与[浏览器 OCR](0004-browser-ocr-ingestion.md)。

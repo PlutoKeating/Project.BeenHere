@@ -4,7 +4,7 @@
 
 ## 1. 环境要求
 
-- Node.js 22.13 或更高版本；CI 当前使用 Node.js 24。
+- Node.js 22.13 或更高版本；Workers Builds（根 `.node-version`）与 GitHub CI 当前使用 Node.js 24。
 - npm，依赖版本由根目录 `package-lock.json` 锁定。
 - 需要执行 Cloudflare 远程命令时，先完成 `npx wrangler login`。
 
@@ -75,7 +75,7 @@ npx wrangler d1 execute beenhere-records --local \
   --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
 ```
 
-新增数据库变化时创建递增迁移，例如 `0002_description.sql`。不要修改已经在生产执行过的迁移；CI 只会执行尚未记录的文件。
+新增数据库变化时创建递增迁移，例如 `0002_description.sql`。不要修改已经在生产执行过的迁移；Workers Builds 部署时只会执行尚未记录的文件。
 
 ## 6. 常见本地问题
 

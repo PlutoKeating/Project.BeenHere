@@ -43,7 +43,7 @@ flowchart TD
 | 截图识别 | PaddleOCR.js 0.4.2 / PP-OCRv6 tiny / ONNX Runtime Web 1.24.3 WASM | `src/lib/ocr.ts`、`src/lib/ocr-conversation.ts` |
 | 邮件 | Worker TCP Socket → SMTP over TLS 465 | `worker/smtp.ts` |
 | 测试 | Vitest 4.1.11（Node 环境；个别 DOM 测试显式使用 JSDOM 30.0.1） | `vitest.config.ts`、`*.test.ts(x)` |
-| 部署 | GitHub Actions、Wrangler 4.127.1 | `.github/workflows/ci.yml` |
+| 部署 | Cloudflare Workers Builds（Git 连接）、Wrangler 4.127.1；GitHub Actions 只做验证 | `apps/web/package.json` 的 `deploy:builds`、`.github/workflows/ci.yml` |
 
 根 `package.json` 是 npm workspace 入口，当前只有 `apps/web` 一个 workspace 和一个部署单元。版本事实以 `package-lock.json` 的解析结果为准；`package.json` 中使用范围声明的依赖不应被文档误写成永久固定版本。
 

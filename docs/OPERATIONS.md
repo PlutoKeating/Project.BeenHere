@@ -13,8 +13,9 @@
 
 | 能力 | 所需权限 |
 |---|---|
-| 查看 GitHub Actions | GitHub 仓库 read/actions |
-| 推送 main / 触发发布 | GitHub write 与 production environment 权限 |
+| 查看 GitHub Actions CI | GitHub 仓库 read/actions |
+| 推送 main / 触发发布 | GitHub write；发布由 Workers Builds 执行 |
+| 查看构建/修改 Workers Builds 设置 | Cloudflare Workers read/write |
 | Worker 日志/部署 | Cloudflare Workers read/write 或 tail 权限 |
 | D1 查询/恢复 | Cloudflare D1 read/write |
 | Secrets 轮换 | Cloudflare Workers Secrets write |
@@ -34,10 +35,10 @@ curl --fail --head \
 curl --fail --head \
   https://beenhere.plutokeating.beer/vendor/paddleocr-worker-0.4.2.js
 
-gh run list --workflow "CI and deploy" --branch main --limit 3
+gh run list --workflow "CI" --branch main --limit 3
 ```
 
-预期：health 为 200 和 `{"status":"ok","service":"project-been-here"}`；首页与 OCR vendor 为 200；vendor 为 11,341,486 字节并带 immutable cache；最新生产 run 的 verify/deploy 均成功。首页和 vendor 应各只有一条不同 CSP，不能把两条策略叠加到 vendor。
+预期：health 为 200 和 `{"status":"ok","service":"project-been-here"}`；首页与 OCR vendor 为 200；vendor 为 11,341,486 字节并带 immutable cache；最新提交的 GitHub `CI` 通过，且 Cloudflare Dashboard 中对应的 Workers Builds 构建与部署成功。首页和 vendor 应各只有一条不同 CSP，不能把两条策略叠加到 vendor。
 
 健康接口只验证 Worker 基本路由，不覆盖 SMTP、D1 写入、登录或邮件链接。相关发布必须执行对应业务烟测。
 
@@ -66,7 +67,7 @@ Workers Logs 已在 `wrangler.jsonc` 开启，可在 Cloudflare Dashboard → Wo
 
 1. 记录北京时间/UTC、影响路径、用户症状、最近成功版本与最近变更。
 2. health、首页、相关 API 各测一次，区分静态、Worker、D1、SMTP。
-3. 查看 GitHub run 与 Worker deployments，不盲目重放失败命令。
+3. 查看 Workers Builds 构建日志、Worker deployments 与 GitHub `CI`，不盲目重放失败命令。
 4. 打开实时日志，以一次受控请求复现。
 5. 若涉及数据写入，先取得当前 D1 bookmark。
 6. 选择修复、Worker 回滚或 D1 Time Travel；分别验证。
@@ -125,15 +126,16 @@ SMTP Password 失效时先在邮箱提供商生成新授权凭据，再交互执
 5. 若 vendor 已加载但没有模型请求，优先检查 vendor CSP 的 eval 权限；若模型成功而 jsDelivr `.mjs` 失败，检查 vendor `script-src`；若 `.mjs` 成功而 WASM 失败，检查 `connect-src`、CORS 与上游状态。
 6. OCR 失败不影响 D1 与现有采访记录；指导用户展开纯文本录入。若固定上游资源长期不可用，再通过代码评审更换固定版本或自托管资产，不新建第二个生产 Worker 绕过。
 
-### CI 失败
+### 构建或部署失败
 
-- verify 失败：修复 typecheck/test/build 或根 Markdown 布局，不能跳过 deploy 门禁。
+- GitHub `CI` 失败：修复 typecheck/test/build 或根 Markdown 布局。它不阻止 Workers Builds，若同一提交已部署，应尽快修复或回滚。
+- Workers Builds build command 失败：同 `npm run check`，不会执行部署。
 - bookmark 失败：检查 D1 权限与数据库名；未获得恢复点时不要继续破坏性迁移。
 - migration 失败：保存错误与 bookmark，判断是否部分应用；D1 migration 记录是事实源。
-- deploy 失败：确认 Worker 名、D1 ID、custom domain 和 GitHub Cloudflare 凭据。
-- health 失败：部署可能已生效但不健康；查看 deployment 与日志后决定 Worker rollback。
+- deploy 失败：确认 Dashboard Worker 名与 `wrangler.jsonc:name` 一致、D1 ID、custom domain 所在 zone 与 Workers Builds 构建令牌权限。
+- 部署后不健康：查看 deployment 与日志后决定 Worker rollback。
 
-当前 Actions 使用 Node.js 24、`wrangler-action@v4` 与 Wrangler 4.127.1。排查依赖差异时先比较 `package-lock.json` 和 `npm ls --depth=0 --workspace @beenhere/web`，不要只看 `package.json` 的范围声明。
+Workers Builds 使用根 `.node-version`（Node.js 24）与 lockfile 中的 Wrangler 4.127.1；GitHub `CI` 同样使用 Node.js 24。排查依赖差异时先比较 `package-lock.json` 和 `npm ls --depth=0 --workspace @beenhere/web`，不要只看 `package.json` 的范围声明。
 
 ## 7. 账户运维
 
@@ -258,7 +260,7 @@ npx wrangler d1 time-travel restore beenhere-records \
 5. 验证迁移表、核心数量、外键、登录、读取和受控写入。
 6. 如恢复点错误，用 `previous_bookmark` 撤销。
 
-Cloudflare Time Travel 自动开启；保留期依套餐通常为 7 天或 30 天，CI artifact 只保留 7 天。它不是长期异地备份。详见 [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)。
+Cloudflare Time Travel 自动开启；保留期依套餐通常为 7 天或 30 天；Workers Builds 日志中的部署前 bookmark 只是恢复点索引，不是数据副本。它不是长期异地备份。详见 [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)。
 
 ## 12. Secret 轮换
 
@@ -267,7 +269,7 @@ Cloudflare Time Travel 自动开启；保留期依套餐通常为 7 天或 30 �
 | `SESSION_SECRET` | 公告需要重新登录 → 写入强随机新值 → 验证登录 → 观察 401/错误率。旧会话全部失效。 |
 | SMTP 凭据 | 邮箱侧生成新授权码 → 更新 USERNAME/PASSWORD → 真实投递验证 → 吊销旧授权码。 |
 | `SUPERADMIN_EMAILS` | 审核名单 → 更新 Secret → 用新注册流程验证；已有角色另行受控处理。 |
-| GitHub Cloudflare token | 创建最小权限新 token → 更新 GitHub Secret → 手工触发 workflow → 成功后吊销旧 token。 |
+| Workers Builds 构建令牌 | 在 Worker → Settings → Build 中重新选择或生成 API token → 手动重试最新构建 → 成功后吊销旧 token。 |
 
 任何 Secret 写入都会产生 Worker deployment；轮换后检查当前部署和 health。
 

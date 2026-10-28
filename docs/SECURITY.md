@@ -10,7 +10,7 @@
 - 同源 OCR Web Worker 是浏览器内的临时计算边界；它接收 ImageBitmap，不能读取 HttpOnly 会话 Cookie，当前代码不调用本站 API，也不具备 D1 binding 或截图上传接口。Paddle BCE、jsDelivr 与 Google Fonts 是受 CSP 固定来源限制的外部静态资源服务。
 - D1 只接受 Worker/运维凭据访问；浏览器没有 D1 binding。
 - SMTP 是外部依赖，只接收最小的收件地址、邮件正文和验证链接。
-- GitHub Actions 与 Cloudflare 管理凭据是生产控制面，权限高于站内馆长。
+- Cloudflare 账户、Workers Builds 构建令牌与 GitHub 仓库写权限是生产控制面，权限高于站内馆长。
 
 ## 2. 密码
 
@@ -103,10 +103,10 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 ## 10. Secrets 与控制面
 
 - Worker Secrets：`SESSION_SECRET`、`SMTP_USERNAME`、`SMTP_PASSWORD`、`SUPERADMIN_EMAILS`。
-- GitHub Secret：`CLOUDFLARE_API_TOKEN`；variable：`CLOUDFLARE_ACCOUNT_ID`。
+- Workers Builds 构建令牌由 Cloudflare 托管；GitHub 不保存 Cloudflare 凭据，Actions 只做验证。
 - 非敏感 vars 才进入 `wrangler.jsonc`。
 - 本地凭据只进入被 Git 忽略的 `.dev.vars`。
-- 不在源码、迁移、文档、issue、Actions output 或日志中记录 Secret 值。
+- 不在源码、迁移、文档、issue、构建输出或日志中记录 Secret 值。
 
 配置与轮换见 [DEPLOYMENT.md](DEPLOYMENT.md) 和 [OPERATIONS.md](OPERATIONS.md)。
 
@@ -153,7 +153,7 @@ Key 在写入 D1 前做 SHA-256，不直接保存 IP。应用限流不是 DDoS/W
 
 1. 停止公开传播含敏感信息的日志/截图并记录暴露范围。
 2. 按影响轮换 SMTP、SESSION_SECRET 或 Cloudflare token；不要只删除聊天或日志。
-3. 查看 Worker deployments、GitHub Actions、D1 审计和账户状态。
+3. 查看 Worker deployments、Workers Builds 构建记录、D1 审计和账户状态。
 4. 如可能存在未授权数据修改，保存当前 bookmark 后定位事故前恢复点。
 5. 验证生产健康、登录、邮件和关键数据；记录根因与预防措施。
 
