@@ -15,6 +15,7 @@
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
     "deploy": "npm run build && wrangler deploy",
+    "deploy:builds": "wrangler d1 time-travel info beenhere-records && wrangler d1 migrations apply beenhere-records --remote && wrangler deploy",
     "cf:typegen": "wrangler types worker/env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply beenhere-records --local",
     "db:migrate:remote": "wrangler d1 migrations apply beenhere-records --remote",
