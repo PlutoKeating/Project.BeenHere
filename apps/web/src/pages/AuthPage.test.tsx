@@ -10,7 +10,7 @@ describe("registration success", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("shows only the success state after the asynchronous request", async () => {
-    const dom = new JSDOM("<div id='root'></div>", { url: "https://beenhere.arr2018.dpdns.org/auth/register" });
+    const dom = new JSDOM("<div id='root'></div>", { url: "https://beenhere.plutokeating.beer/auth/register" });
     Object.assign(globalThis, {
       window: dom.window,
       document: dom.window.document,

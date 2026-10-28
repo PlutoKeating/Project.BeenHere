@@ -26,7 +26,7 @@ describe("record claim action", () => {
       source: null,
     };
     vi.spyOn(api, "record").mockResolvedValue(record);
-    const dom = new JSDOM("<div id='root'></div>", { url: "https://beenhere.arr2018.dpdns.org/records/BH-000001" });
+    const dom = new JSDOM("<div id='root'></div>", { url: "https://beenhere.plutokeating.beer/records/BH-000001" });
     Object.assign(globalThis, { window: dom.window, document: dom.window.document, IS_REACT_ACT_ENVIRONMENT: true });
     const root = createRoot(dom.window.document.querySelector("#root")!);
 

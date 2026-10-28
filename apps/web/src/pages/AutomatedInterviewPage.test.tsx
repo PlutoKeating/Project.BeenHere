@@ -7,7 +7,7 @@ import { AutomatedInterviewPage } from "./AutomatedInterviewPage";
 
 describe("automated interview page", () => {
   it("requires informed agreement before showing the interview transcript", async () => {
-    const dom = new JSDOM("<div id='root'></div>", { url: "https://beenhere.arr2018.dpdns.org/studio/interview" });
+    const dom = new JSDOM("<div id='root'></div>", { url: "https://beenhere.plutokeating.beer/studio/interview" });
     Object.assign(globalThis, {
       window: dom.window,
       document: dom.window.document,

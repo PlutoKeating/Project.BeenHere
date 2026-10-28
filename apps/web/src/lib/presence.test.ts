@@ -24,7 +24,7 @@ describe("presence updates", () => {
     }
     const setItem = vi.fn();
     vi.stubGlobal("window", {
-      location: { href: "https://beenhere.arr2018.dpdns.org/records", protocol: "https:" },
+      location: { href: "https://beenhere.plutokeating.beer/records", protocol: "https:" },
       localStorage: { getItem: () => null, setItem },
       crypto: { randomUUID: () => "018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa" },
       WebSocket: FakeWebSocket,
@@ -39,7 +39,7 @@ describe("presence updates", () => {
     listeners.get("open")?.({});
     listeners.get("message")?.({ data: '{"type":"presence","online":3}' });
 
-    expect(urls).toEqual(["wss://beenhere.arr2018.dpdns.org/api/presence"]);
+    expect(urls).toEqual(["wss://beenhere.plutokeating.beer/api/presence"]);
     expect(setItem).toHaveBeenCalledWith("bh_presence_visitor", "018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa");
     expect(send).toHaveBeenCalledWith('{"type":"hello","visitorId":"018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa"}');
     expect(receive).toHaveBeenCalledWith(3);

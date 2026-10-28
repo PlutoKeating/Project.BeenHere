@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: production
-      url: https://beenhere.arr2018.dpdns.org
+      url: https://beenhere.plutokeating.beer
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -71,4 +71,4 @@ jobs:
           preCommands: wrangler d1 migrations apply beenhere-records --remote
           command: deploy
       - name: Verify production
-        run: curl --fail --retry 5 --retry-delay 3 https://beenhere.arr2018.dpdns.org/api/health
+        run: curl --fail --retry 5 --retry-delay 3 https://beenhere.plutokeating.beer/api/health

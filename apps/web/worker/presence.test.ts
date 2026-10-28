@@ -3,7 +3,7 @@ import worker from "./index";
 import { countOnlineVisitors, PresenceRoom, presenceUpdate } from "./presence";
 import type { Env } from "./types";
 
-const siteUrl = "https://beenhere.arr2018.dpdns.org";
+const siteUrl = "https://beenhere.plutokeating.beer";
 const visitorId = "018f2f29-7e41-7b5e-8fa8-3b2f0d9cb4aa";
 
 function presenceEnv() {

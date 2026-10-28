@@ -14,7 +14,7 @@ export function formatMessage(fromName: string, from: string, email: Email): str
   return [
     `From: ${encodeHeader(safe(fromName))} <${safe(from)}>`, `To: <${safe(email.to)}>`,
     `Subject: ${encodeHeader(safe(email.subject))}`, `Date: ${new Date().toUTCString()}`,
-    `Message-ID: <${crypto.randomUUID()}@beenhere.arr2018.dpdns.org>`, "MIME-Version: 1.0",
+    `Message-ID: <${crypto.randomUUID()}@beenhere.plutokeating.beer>`, "MIME-Version: 1.0",
     `Content-Type: multipart/alternative; boundary="${boundary}"`, "",
     `--${boundary}`, "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: 8bit", "", text,
     `--${boundary}`, "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: 8bit", "", html,
@@ -60,7 +60,7 @@ export async function sendEmail(env: Env, email: Email): Promise<void> {
   try {
     const greeting = await reader.reply();
     if (greeting.code !== 220) throw new Error(`SMTP ${greeting.code}`);
-    await command("EHLO beenhere.arr2018.dpdns.org", [250]);
+    await command("EHLO beenhere.plutokeating.beer", [250]);
     await command("AUTH LOGIN", [334]);
     await command(base64(env.SMTP_USERNAME), [334]);
     await command(base64(env.SMTP_PASSWORD), [235]);
